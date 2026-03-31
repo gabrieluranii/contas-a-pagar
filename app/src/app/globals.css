@@ -1,0 +1,289 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff; --surface: #f7f7f5; --surface2: #efefec;
+  --border: #e8e8e5; --border2: #d8d8d5;
+  --text: #1a1a1a; --text2: #555555; --text3: #777777;
+  --accent: #4a9e6a; --accent-light: #1a2e22; --accent-text: #6fcf8a;
+  --danger: #cf5555; --danger-light: #2e1a1a;
+  --warning: #c9961a; --warning-light: #2e2410;
+  --info: #5a9ad5; --info-light: #1a2436;
+  --nav-w: 56px; --nav-w-open: 224px; --nav-orange: #d97757;
+  --nav-bg: #111111; --nav-bg2: #1a1a1a; --nav-text: #888; --nav-text-active: #f0f0f0;
+  --radius: 10px; --radius-lg: 14px;
+  font-size: 15px;
+
+  /* ── DASHBOARD HOME TOKENS ── */
+  --dash-bg: #0A0A0A;
+  --dash-card-gradient: linear-gradient(135deg, #312E81 0%, #4F46E5 100%);
+  --dash-card-shadow: 0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.07);
+  --dash-card-shadow-hover: 0 10px 36px rgba(79,70,229,0.35), 0 0 0 1px rgba(255,255,255,0.12);
+  --dash-section-bg: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  --dash-section-border: #1E3A5F;
+  --dash-section-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
+  --dash-cyan: #00CCCC;
+  --dash-btn-gradient: linear-gradient(90deg, #7C3AED 0%, #4F46E5 100%);
+  --dash-btn-glow: 0 0 0 1px rgba(99,102,241,0.4), 0 8px 32px rgba(99,102,241,0.45);
+  --dash-btn-glow-hover: 0 0 0 1px rgba(99,102,241,0.6), 0 12px 48px rgba(99,102,241,0.65);
+  --dash-text: #FFFFFF;
+  --dash-text-sub: rgba(255,255,255,0.65);
+  --dash-font: 'Outfit', sans-serif;
+  --dash-row-hover: rgba(99,102,241,0.08);
+}
+
+/* ── TYPOGRAPHY SYSTEM ── */
+/* Regra global: nenhum texto abaixo de #777777, opacidade 100% */
+.page-title {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #1a1a1a !important;
+  letter-spacing: -0.3px !important;
+  line-height: 1.2 !important;
+  opacity: 1 !important;
+}
+.section-label {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  color: #444444 !important;
+  opacity: 1 !important;
+}
+.card-label {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.5px !important;
+  color: #555555 !important;
+  opacity: 1 !important;
+}
+.card-value {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.card-sub {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px !important;
+  color: #888888 !important;
+  opacity: 1 !important;
+}
+.empty-state {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  color: #777777 !important;
+  opacity: 1 !important;
+}
+/* Remove any residual opacity declarations on text elements */
+[style*='opacity: 0.4'], [style*='opacity:0.4'] {
+  opacity: 1 !important;
+}
+
+/* ── MODAL SYSTEM OVERRIDES ── */
+.sys-modal p, .sys-modal .desc, .sys-modal span {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px !important;
+  color: #444444 !important;
+  opacity: 1 !important;
+}
+.sys-modal div, .sys-modal td, .sys-modal th {
+  font-family: 'Inter', sans-serif;
+  opacity: 1 !important;
+}
+.sys-modal label, .sys-modal .field-label {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  color: #555555 !important;
+  opacity: 1 !important;
+}
+.sys-modal input, .sys-modal select, .sys-modal textarea {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  color: #1a1a1a !important;
+  opacity: 1 !important;
+}
+.sys-modal input::placeholder, .sys-modal textarea::placeholder {
+  color: #aaaaaa !important;
+  opacity: 1 !important;
+}
+.sys-modal button {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  border: 1px solid #e0e0dd !important;
+  color: #555555 !important;
+  transition: all 0.2s ease;
+}
+.sys-modal button:hover {
+  background: #f7f7f5 !important;
+}
+.sys-modal button[style*="var(--accent)"], 
+.sys-modal button[style*="--accent"],
+.sys-modal button.primary {
+  background: #d97757 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.sys-modal button[style*="var(--accent)"]:hover,
+.sys-modal button[style*="--accent"]:hover,
+.sys-modal button.primary:hover {
+  background: #c4663f !important;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ── SCROLLBAR ── */
+* { scrollbar-width: thin; scrollbar-color: #333 transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+/* ── NAV ── */
+nav {
+  width: var(--nav-w);
+  min-height: 100vh;
+  background: var(--nav-bg);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  overflow: visible;
+  transition: width 0.22s cubic-bezier(.4,0,.2,1);
+  z-index: 50;
+  border-right: 1px solid #2a2a2a;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.4);
+}
+nav:hover, nav.expanded { width: var(--nav-w-open); }
+.nav-logo, .nav-section-label, .nav-link-label, .nav-arrow, .nav-footer-text {
+  opacity: 0;
+  transition: opacity 0.15s 0.05s;
+}
+nav:hover .nav-logo,
+nav:hover .nav-section-label,
+nav:hover .nav-link-label,
+nav:hover .nav-arrow,
+nav:hover .nav-footer-text,
+nav.expanded .nav-logo,
+nav.expanded .nav-section-label,
+nav.expanded .nav-link-label,
+nav.expanded .nav-arrow,
+nav.expanded .nav-footer-text { opacity: 1; }
+
+/* ── MAIN ── */
+main {
+  margin-left: var(--nav-w);
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  transition: margin-left 0.22s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── BADGES ── */
+.badge-pending  { background: var(--warning-light); color: var(--warning); }
+.badge-paid     { background: var(--accent-light);  color: var(--accent-text); }
+.badge-overdue  { background: var(--danger-light);  color: var(--danger); }
+.pill-base      { background: var(--info-light);    color: var(--info); }
+.pill-cat       { background: var(--surface2);      color: var(--text2); border: 1px solid var(--border); }
+.pill-critical  { background: var(--danger-light);  color: var(--danger);  border: 1px solid #4a2020; }
+.pill-warning   { background: var(--warning-light); color: var(--warning); border: 1px solid #4a3810; }
+.pill-ok        { background: var(--accent-light);  color: var(--accent-text); border: 1px solid #2a4a33; }
+.pill-rateio    { background: #1a1e33; color: #7788cc; border: 1px solid #2a3066; }
+.pill-tvo       { background: #241a33; color: #9966cc; border: 1px solid #3a2866; }
+.pill-conting   { background: #332410; color: #cc8833; border: 1px solid #664418; }
+.pill-tpgto     { background: var(--info-light); color: var(--info); }
+.pill-tvo-tipo  { background: #241a33; color: #9966cc; }
+.pill-conting-tipo { background: #332410; color: #cc8833; }
+
+/* ── URGENCY ROWS ── */
+.urgency-critical { border-left: 3px solid var(--danger);  padding-left: 10px; margin-left: -13px; }
+.urgency-warning  { border-left: 3px solid var(--warning); padding-left: 10px; margin-left: -13px; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fadeIn 0.2s ease; }
+
+/* ── FORM ── */
+input, select, textarea {
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+input::placeholder { color: var(--text3); }
+.field-error { border-color: var(--danger) !important; box-shadow: 0 0 0 2px rgba(139,46,46,0.15); }
+
+/* ── TABLES ── */
+.orcamento-table { border-collapse: collapse; width: 100%; }
+.orcamento-table th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text3); font-weight: 500; padding: 10px;
+  border-bottom: 1px solid var(--border); text-align: left; background: var(--surface);
+}
+.orcamento-table td {
+  padding: 10px; border-top: 1px solid var(--border);
+  vertical-align: middle; font-size: 13px; white-space: nowrap;
+}
+.orcamento-table tbody tr:hover { background: var(--surface2); }
+.orcamento-table tr:first-child td { border-top: none; }
+
+/* ── ATTACH CHIPS ── */
+.attach-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 4px 10px;
+  font-size: 12px; cursor: pointer;
+  transition: all 0.15s; max-width: 200px;
+}
+.attach-chip:hover { border-color: var(--accent); background: var(--accent-light); }
+
+/* ── SALDO BAR ── */
+.saldo-bar-wrap { background: var(--surface2); border-radius: 20px; height: 6px; overflow: hidden; min-width: 80px; }
+.saldo-bar { height: 6px; border-radius: 20px; background: var(--accent); transition: width 0.3s; }
+.saldo-bar.warn { background: var(--warning); }
+.saldo-bar.over { background: var(--danger); }
+
+/* ── RATEIO LINES ── */
+.rateio-line { display: grid; grid-template-columns: 1fr 100px 80px 28px; gap: 8px; align-items: center; }
+.rateio-line select, .rateio-line input { padding: 7px 10px; font-size: 13px; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  nav { display: none; }
+  main { margin-left: 0; padding-bottom: 70px; }
+  .mobile-nav {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--nav-bg); border-top: 1px solid #2a2a2a;
+    z-index: 50; height: 60px;
+  }
+}
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+}
