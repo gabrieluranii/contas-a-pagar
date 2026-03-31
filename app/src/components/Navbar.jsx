@@ -35,6 +35,7 @@ const CardIcon = () => <Icon><rect x="1" y="4" width="22" height="16" rx="2" ry=
 const ZapIcon  = () => <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>;
 const ShieldIcon=() => <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>;
 const DbIcon   = () => <Icon><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></Icon>;
+const DashIcon = () => <Icon><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></Icon>;
 const GearIcon = () => <Icon><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
 
 const ChevronDown = ({ open }) => (
@@ -110,14 +111,19 @@ function NavItem({ href, icon, label, expanded, badge }) {
 }
 
 // ── NavGroup (com submenu) ────────────────────────────────────────────────────
-function NavGroup({ icon, label, children, expanded, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [hov, setHov]   = useState(false);
+// isOpen e onToggle vêm do pai (Navbar), garantindo um único grupo aberto por vez
+function NavGroup({ icon, label, children, expanded, isOpen, onToggle }) {
+  const [hov, setHov] = useState(false);
+
+  const handleClick = () => {
+    if (!expanded) return;
+    onToggle();
+  };
 
   return (
     <div>
       <button
-        onClick={() => expanded && setOpen(o => !o)}
+        onClick={handleClick}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         style={{
@@ -155,12 +161,12 @@ function NavGroup({ icon, label, children, expanded, defaultOpen = false }) {
             }}>
               {label}
             </span>
-            <ChevronDown open={open}/>
+            <ChevronDown open={isOpen}/>
           </>
         )}
       </button>
 
-      {open && expanded && (
+      {isOpen && expanded && (
         <div style={{ background: '#0d0d0d' }}>
           {children}
         </div>
@@ -224,6 +230,15 @@ export default function Navbar() {
   const { state } = useApp();
   const pathname  = usePathname();
   const [expanded, setExpanded] = useState(false);
+  // Estado compartilhado: id do grupo aberto ou null
+  const [openGroup, setOpenGroup] = useState(() => {
+    if (pathname.startsWith('/cadastro') || pathname.startsWith('/cc')) return 'cadastro';
+    if (pathname.startsWith('/config')) return 'config';
+    return null;
+  });
+
+  const toggleGroup = (id) =>
+    setOpenGroup(prev => (prev === id ? null : id));
 
   const pending = state.bills.filter(b => b.status === 'pending');
   const urgentCount = pending.filter(b => {
@@ -295,6 +310,7 @@ export default function Navbar() {
           <Div/>
           <NavItem href="/"             icon={<HomeIcon/>}  label="Página Inicial"     expanded={expanded}/>
           <NavItem href="/calendario"   icon={<CalIcon/>}   label="Calendário"         expanded={expanded}/>
+          <NavItem href="/dashboards"   icon={<DashIcon/>}  label="Dashboards"         expanded={expanded}/>
           <Div/>
           <NavItem href="/contas"       icon={<CardIcon/>}  label="Pagamentos Pendentes" expanded={expanded} badge={urgentCount}/>
           <NavItem href="/lancamentos"  icon={<ZapIcon/>}   label="Lançamentos"        expanded={expanded}/>
@@ -304,7 +320,8 @@ export default function Navbar() {
             icon={<DbIcon/>}
             label="Cadastro"
             expanded={expanded}
-            defaultOpen={pathname.startsWith('/cadastro') || pathname.startsWith('/cc')}
+            isOpen={openGroup === 'cadastro'}
+            onToggle={() => toggleGroup('cadastro')}
           >
             <SubItem href="/cc"                 label="Centro de Custo"/>
             <SubItem href="/cadastro/produto"   label="Produtos"/>
@@ -315,7 +332,8 @@ export default function Navbar() {
             icon={<GearIcon/>}
             label="Configurações"
             expanded={expanded}
-            defaultOpen={pathname.startsWith('/config')}
+            isOpen={openGroup === 'config'}
+            onToggle={() => toggleGroup('config')}
           >
             <SubItem href="/config/backup" label="Backup"/>
             <SubItem href="/config/api"    label="Chave API"/>

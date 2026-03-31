@@ -1,12 +1,19 @@
 {
-  "name": "app",
-  "version": "0.1.0",
+  "name": "contas-a-pagar",
+  "version": "1.0.0",
+  "description": "Dashboard de contas a pagar - Obsidian Ledger",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.0",

@@ -1,0 +1,257 @@
+<!--
+  ═══════════════════════════════════════════════════════════════════
+  VERSION-SNIPPET.html — Badge de Versão para Footer
+  Projeto: Contas a Pagar · Tema: Obsidian Ledger
+  ───────────────────────────────────────────────────────────────────
+  Como usar:
+    1. Copie este snippet e cole no <footer> do seu app
+    2. Se usar variáveis CSS do tema (var(--accent), etc.),
+       verifique que seu :root as define
+    3. Para atualizar a versão, edite data-version abaixo
+  ═══════════════════════════════════════════════════════════════════
+-->
+
+<!-- Container raiz do badge de versão -->
+<div
+  id="version-badge-root"
+  data-version="1.0.0"
+  data-theme="Obsidian Ledger"
+  data-build-date="2026-03-31"
+  aria-label="Informações de versão do aplicativo"
+  role="contentinfo"
+>
+  <!-- O JavaScript abaixo renderiza o badge aqui -->
+</div>
+
+<!-- ═══ ESTILOS ═══════════════════════════════════════════════════ -->
+<style>
+  /* ── Tokens do tema Obsidian Ledger ──
+     Estes valores devem estar no :root do seu app.
+     Se já estiverem definidos, remova este bloco. */
+  :root {
+    --color-primary:    #2d5a3d;
+    --color-primary-10: rgba(45, 90, 61, 0.10);
+    --color-primary-20: rgba(45, 90, 61, 0.20);
+    --color-bg:         #f5f3ee;
+    --color-bg-card:    #ffffff;
+    --color-text:       #1a2e1e;
+    --color-text-muted: #6b7c6e;
+    --color-border:     rgba(45, 90, 61, 0.15);
+    --radius-sm:        0.375rem;
+    --radius-md:        0.625rem;
+    --transition-fast:  all 0.15s ease;
+  }
+
+  /* ── Badge container ── */
+  .version-badge {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background-color: var(--color-bg, #f5f3ee);
+    border: 1px solid var(--color-border, rgba(45,90,61,0.15));
+    border-radius: var(--radius-md, 0.625rem);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    transition: var(--transition-fast);
+    max-width: fit-content;
+  }
+
+  .version-badge:hover {
+    box-shadow: 0 2px 8px rgba(45, 90, 61, 0.12);
+    border-color: var(--color-primary-20, rgba(45,90,61,0.20));
+  }
+
+  /* ── Linha superior: nome + tag ── */
+  .version-badge__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .version-badge__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: var(--color-primary, #2d5a3d);
+    color: #ffffff;
+    border-radius: var(--radius-sm, 0.375rem);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .version-badge__app-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #2d5a3d);
+    white-space: nowrap;
+  }
+
+  .version-badge__tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.0625rem 0.375rem;
+    background-color: var(--color-primary-10, rgba(45,90,61,0.10));
+    color: var(--color-primary, #2d5a3d);
+    border-radius: 0.25rem;
+    font-family: 'Geist Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ── Indicador de ambiente ── */
+  .version-badge__env {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .version-badge__env--prod {
+    background-color: #ecfdf5;
+    color: #065f46;
+    outline: 1px solid #a7f3d0;
+  }
+
+  .version-badge__env--dev {
+    background-color: #fffbeb;
+    color: #92400e;
+    outline: 1px solid #fcd34d;
+  }
+
+  .version-badge__env-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .version-badge__env--prod .version-badge__env-dot {
+    background-color: #10b981;
+    animation: pulse-green 2s ease-in-out infinite;
+  }
+
+  .version-badge__env--dev .version-badge__env-dot {
+    background-color: #f59e0b;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  /* ── Divisor ── */
+  .version-badge__divider {
+    height: 1px;
+    background-color: var(--color-border, rgba(45,90,61,0.12));
+  }
+
+  /* ── Linha inferior: tema + data ── */
+  .version-badge__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.6875rem;
+    color: var(--color-text-muted, #6b7c6e);
+  }
+
+  .version-badge__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .version-badge__meta svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    opacity: 0.55;
+    flex-shrink: 0;
+  }
+</style>
+
+<!-- ═══ SCRIPT ════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  // ── Lê atributos de dados do container ──
+  const root = document.getElementById('version-badge-root');
+  if (!root) return;
+
+  const version   = root.dataset.version   || '1.0.0';
+  const theme     = root.dataset.theme     || 'Obsidian Ledger';
+  const buildRaw  = root.dataset.buildDate || '2026-03-31';
+
+  // ── Formata data para pt-BR usando a API Intl ──
+  const buildDate = new Date(buildRaw + 'T12:00:00'); // noon → evita offset issue
+  const dateFormatted = buildDate.toLocaleDateString('pt-BR', {
+    day:   '2-digit',
+    month: '2-digit',
+    year:  'numeric',
+  });
+
+  // ── Detecta ambiente ──
+  const isDev = (
+    location.hostname === 'localhost' ||
+    location.hostname === '127.0.0.1' ||
+    location.hostname.includes('.local') ||
+    location.port !== ''
+  );
+  const envLabel = isDev ? 'dev' : 'prod';
+  const envClass = isDev ? 'version-badge__env--dev' : 'version-badge__env--prod';
+
+  // ── Ícones SVG inline ──
+  const iconTheme = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+  </svg>`;
+
+  const iconCalendar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8"  y1="2" x2="8"  y2="6"/>
+    <line x1="3"  y1="10" x2="21" y2="10"/>
+  </svg>`;
+
+  // ── Renderiza o badge ──
+  root.innerHTML = `
+    <div class="version-badge">
+      <div class="version-badge__header">
+        <div class="version-badge__icon" aria-hidden="true">CA</div>
+        <span class="version-badge__app-name">Contas a Pagar</span>
+        <span class="version-badge__tag">v${version}</span>
+        <span class="version-badge__env ${envClass}">
+          <span class="version-badge__env-dot"></span>
+          ${envLabel}
+        </span>
+      </div>
+
+      <div class="version-badge__divider"></div>
+
+      <div class="version-badge__footer">
+        <span class="version-badge__meta">
+          ${iconTheme}
+          <span>${theme}</span>
+        </span>
+        <span class="version-badge__meta">
+          ${iconCalendar}
+          <span>${dateFormatted}</span>
+        </span>
+      </div>
+    </div>
+  `;
+})();
+</script>
