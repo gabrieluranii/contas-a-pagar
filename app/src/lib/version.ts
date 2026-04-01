@@ -1,4 +1,8 @@
-export const APP_VERSION = "1.0.0";
+import pkg from '../../package.json';
+
+// Versão lida automaticamente do package.json
+// Basta rodar `npm run version:patch/minor/major` e o badge atualiza sozinho
+export const APP_VERSION: string = pkg.version;
 export const APP_NAME = "Contas a Pagar";
 export const THEME = "Obsidian Ledger";
 export const BUILD_DATE = new Date("2026-03-31");
@@ -21,3 +25,4 @@ export function getVersionInfo() {
 }
 
 export default getVersionInfo;
+

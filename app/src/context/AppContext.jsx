@@ -148,7 +148,7 @@ export function AppProvider({ children }) {
   // ── Save to localStorage whenever state changes ────────────────────────────
   useEffect(() => {
     if (!state.loaded) return;
-    saveLocal(state);
+    saveLocal(state, dispatch);
     // Debounced Supabase sync
     if (state.dbOnline) {
       clearTimeout(syncTimer.current);
@@ -170,18 +170,49 @@ export const useApp = () => {
 };
 
 // ── LOCALSTORAGE SAVE ─────────────────────────────────────────────────────────
-function saveLocal(state) {
+function saveLocal(state, dispatch) {
+  const data = {
+    [LS.bills]:        JSON.stringify(state.bills),
+    [LS.tvoBills]:     JSON.stringify(state.tvoBills),
+    [LS.lancamentos]:  JSON.stringify(state.lancamentos),
+    [LS.tvoRegistros]: JSON.stringify(state.tvoRegistros),
+    [LS.bases]:        JSON.stringify(state.bases),
+    [LS.cats]:         JSON.stringify(state.cats),
+    [LS.catDespesas]:  JSON.stringify(state.catDespesas),
+    [LS.gestores]:     JSON.stringify(state.gestores),
+    [LS.orcamentos]:   JSON.stringify(state.orcamentos),
+  };
+
+  // Tentativa 1: salva tudo incluindo attachments
   try {
-    localStorage.setItem(LS.bills,        JSON.stringify(state.bills));
-    localStorage.setItem(LS.tvoBills,     JSON.stringify(state.tvoBills));
-    localStorage.setItem(LS.lancamentos,  JSON.stringify(state.lancamentos));
-    localStorage.setItem(LS.tvoRegistros, JSON.stringify(state.tvoRegistros));
-    localStorage.setItem(LS.bases,        JSON.stringify(state.bases));
-    localStorage.setItem(LS.cats,         JSON.stringify(state.cats));
-    localStorage.setItem(LS.catDespesas,  JSON.stringify(state.catDespesas));
-    localStorage.setItem(LS.gestores,     JSON.stringify(state.gestores));
-    localStorage.setItem(LS.orcamentos,   JSON.stringify(state.orcamentos));
-  } catch {}
+    Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v));
+    return;
+  } catch (e) {
+    if (e.name !== 'QuotaExceededError') return; // erro desconhecido, ignora
+  }
+
+  // Tentativa 2: salva sem attachments (fallback de quota)
+  const strip = (arr) => arr.map(({ attachments: _a, ...rest }) => rest);
+  const slim = {
+    [LS.bills]:        JSON.stringify(strip(state.bills)),
+    [LS.tvoBills]:     JSON.stringify(strip(state.tvoBills)),
+    [LS.lancamentos]:  JSON.stringify(strip(state.lancamentos)),
+    [LS.tvoRegistros]: JSON.stringify(state.tvoRegistros), // sem attachments
+    [LS.bases]:        JSON.stringify(state.bases),
+    [LS.cats]:         JSON.stringify(state.cats),
+    [LS.catDespesas]:  JSON.stringify(state.catDespesas),
+    [LS.gestores]:     JSON.stringify(state.gestores),
+    [LS.orcamentos]:   JSON.stringify(state.orcamentos),
+  };
+  try {
+    Object.entries(slim).forEach(([k, v]) => localStorage.setItem(k, v));
+    if (dispatch) dispatch({
+      type: 'SET', key: 'storageWarning',
+      payload: 'Anexos não salvos localmente — espaço insuficiente. Conecte ao Supabase para persistir anexos.',
+    });
+  } catch (e2) {
+    console.error('localStorage save failed even without attachments:', e2);
+  }
 }
 
 // ── SUPABASE LOAD ─────────────────────────────────────────────────────────────
@@ -229,39 +260,95 @@ async function loadRemote(dispatch) {
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 async function syncToRemote(state, dispatch) {
   if (!sb) return;
+
+  // Helper: upsert por ID + delete IDs orfãos
+  const syncById = async (table, localItems, toDb, idField = 'id') => {
+    if (localItems.length > 0) {
+      const { error: upsertErr } = await sb
+        .from(table)
+        .upsert(localItems.map(toDb), { onConflict: idField });
+      if (upsertErr) throw upsertErr;
+    }
+    // Busca IDs remotos e deleta os que não existem mais localmente
+    const { data: remote } = await sb.from(table).select(idField);
+    const localIds = new Set(localItems.map(i => i[idField]));
+    const orphans = (remote || []).map(r => r[idField]).filter(id => !localIds.has(id));
+    if (orphans.length > 0) {
+      await sb.from(table).delete().in(idField, orphans);
+    }
+  };
+
+  // Helper: upsert por name + delete names orfãos
+  const syncByName = async (table, localNames) => {
+    const items = localNames.map(name => ({ name }));
+    if (items.length > 0) {
+      const { error: upsertErr } = await sb
+        .from(table)
+        .upsert(items, { onConflict: 'name' });
+      if (upsertErr) throw upsertErr;
+    }
+    const { data: remote } = await sb.from(table).select('name');
+    const localSet = new Set(localNames);
+    const orphans = (remote || []).map(r => r.name).filter(n => !localSet.has(n));
+    if (orphans.length > 0) {
+      await sb.from(table).delete().in('name', orphans);
+    }
+  };
+
+  // Tabelas com ID numérico
+  const idTables = [
+    { table: 'bills',         items: state.bills,        toDb: mapBillToDb },
+    { table: 'tvo_bills',     items: state.tvoBills,     toDb: mapTvoBillToDb },
+    { table: 'lancamentos',   items: state.lancamentos,  toDb: mapLancToDb },
+    { table: 'tvo_registros', items: state.tvoRegistros, toDb: mapTvoRegToDb },
+    { table: 'bases',         items: state.bases,        toDb: mapBaseToDb },
+  ];
+
+  for (const { table, items, toDb } of idTables) {
+    try {
+      await syncById(table, items, toDb);
+    } catch (e) {
+      console.error(`Sync error [${table}]:`, e);
+      dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "${table}": ${e.message}` });
+    }
+  }
+
+  // Tabelas com chave 'name'
+  const nameTables = [
+    { table: 'categories',  names: state.cats },
+    { table: 'gestores',    names: state.gestores },
+    { table: 'cat_despesas',names: state.catDespesas },
+  ];
+
+  for (const { table, names } of nameTables) {
+    try {
+      await syncByName(table, names);
+    } catch (e) {
+      console.error(`Sync error [${table}]:`, e);
+      dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "${table}": ${e.message}` });
+    }
+  }
+
+  // Orçamentos: chave composta (base + cat + month), sem ID numérico
   try {
-    const ops = [
-      sb.from('bills').delete().neq('id', 0).then(() =>
-        state.bills.length ? sb.from('bills').insert(state.bills.map(mapBillToDb)) : Promise.resolve()
-      ),
-      sb.from('bases').delete().neq('id', 0).then(() =>
-        state.bases.length ? sb.from('bases').insert(state.bases.map(mapBaseToDb)) : Promise.resolve()
-      ),
-      sb.from('categories').delete().neq('id', 0).then(() =>
-        state.cats.length ? sb.from('categories').insert(state.cats.map(n => ({ name: n }))) : Promise.resolve()
-      ),
-      sb.from('gestores').delete().neq('id', 0).then(() =>
-        state.gestores.length ? sb.from('gestores').insert(state.gestores.map(n => ({ name: n }))) : Promise.resolve()
-      ),
-      sb.from('cat_despesas').delete().neq('id', 0).then(() =>
-        state.catDespesas.length ? sb.from('cat_despesas').insert(state.catDespesas.map(n => ({ name: n }))) : Promise.resolve()
-      ),
-      sb.from('orcamentos').delete().neq('id', 0).then(() =>
-        state.orcamentos.length ? sb.from('orcamentos').insert(state.orcamentos.map(o => ({ base: o.base, cat: o.cat, month: o.month, value: o.value }))) : Promise.resolve()
-      ),
-      sb.from('tvo_bills').delete().neq('id', 0).then(() =>
-        state.tvoBills.length ? sb.from('tvo_bills').insert(state.tvoBills.map(mapTvoBillToDb)) : Promise.resolve()
-      ),
-      sb.from('lancamentos').delete().neq('id', 0).then(() =>
-        state.lancamentos.length ? sb.from('lancamentos').insert(state.lancamentos.map(mapLancToDb)) : Promise.resolve()
-      ),
-      sb.from('tvo_registros').delete().neq('id', 0).then(() =>
-        state.tvoRegistros.length ? sb.from('tvo_registros').insert(state.tvoRegistros.map(mapTvoRegToDb)) : Promise.resolve()
-      ),
-    ];
-    await Promise.all(ops);
+    const localOrcs = state.orcamentos.map(o => ({ base: o.base, cat: o.cat, month: o.month, value: o.value }));
+    if (localOrcs.length > 0) {
+      const { error } = await sb
+        .from('orcamentos')
+        .upsert(localOrcs, { onConflict: 'base,cat,month' });
+      if (error) throw error;
+    }
+    // Delete orcãos orfãos pela chave composta
+    const { data: remoteOrcs } = await sb.from('orcamentos').select('base,cat,month');
+    const localKey = new Set(state.orcamentos.map(o => `${o.base}|${o.cat}|${o.month}`));
+    const orphanOrcs = (remoteOrcs || []).filter(r => !localKey.has(`${r.base}|${r.cat}|${r.month}`));
+    for (const o of orphanOrcs) {
+      await sb.from('orcamentos').delete()
+        .eq('base', o.base).eq('cat', o.cat).eq('month', o.month);
+    }
   } catch (e) {
-    console.error('Sync error:', e);
+    console.error('Sync error [orcamentos]:', e);
+    dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "orcamentos": ${e.message}` });
   }
 }
 
