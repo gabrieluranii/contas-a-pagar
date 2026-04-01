@@ -11,3 +11,9 @@ export const isSupabaseConfigured = () =>
 export const sb = isSupabaseConfigured()
   ? createClient(supabaseUrl, supabaseKey)
   : null;
+
+export const getUser = async () => {
+  if (!sb) return null;
+  const { data: { user } } = await sb.auth.getUser();
+  return user;
+};

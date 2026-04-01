@@ -1,5 +1,6 @@
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
+import AuthGate from '@/components/AuthGate';
 import Navbar from '@/components/Navbar';
 
 
@@ -13,10 +14,12 @@ export default function RootLayout({ children }) {
     <html lang="pt-BR">
       <body>
         <AppProvider>
-          <Navbar />
-          <main style={{ padding: '40px' }}>
-            {children}
-          </main>
+          <AuthGate>
+            <Navbar />
+            <main style={{ padding: '40px' }}>
+              {children}
+            </main>
+          </AuthGate>
         </AppProvider>
       </body>
     </html>

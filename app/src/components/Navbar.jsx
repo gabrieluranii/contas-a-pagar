@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { urgencyStatus } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
+import { sb, isSupabaseConfigured } from '@/lib/supabase';
 
 // ── TOKENS ────────────────────────────────────────────────────────────────────
 const NAV = {
@@ -231,6 +232,18 @@ export default function Navbar() {
   const { state } = useApp();
   const pathname  = usePathname();
   const [expanded, setExpanded] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    sb.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email || '');
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => {
+      setUserEmail(session?.user?.email || '');
+    });
+    return () => subscription.unsubscribe();
+  }, []);
   // Estado compartilhado: id do grupo aberto ou null
   const [openGroup, setOpenGroup] = useState(() => {
     if (pathname.startsWith('/cadastro') || pathname.startsWith('/cc')) return 'cadastro';
@@ -346,19 +359,24 @@ export default function Navbar() {
         {/* ── FOOTER: status DB + versão ────────────────────────────────── */}
         <div style={{ padding: '10px 0', borderTop: `1px solid ${NAV.border}`, flexShrink: 0 }}>
           {expanded ? (
-            <div style={{
-              paddingLeft: 18, paddingRight: 14,
-              fontFamily: 'Poppins, sans-serif', fontSize: 10,
-              color: NAV.textSec,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <span>
-                <span style={{ color: state.dbOnline ? '#4caf82' : '#c97c3a', fontWeight: 600 }}>●</span>
-                {' '}{state.dbOnline ? 'Supabase' : 'Local'}
-              </span>
-              <span style={{ opacity: 0.45, fontFamily: 'monospace', fontSize: 9.5, letterSpacing: '0.3px' }}>
-                v{APP_VERSION}
-              </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px 0 18px', fontFamily: 'Poppins, sans-serif', fontSize: 10, color: NAV.textSec }}>
+              {userEmail && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }} title={userEmail}>
+                    {userEmail}
+                  </span>
+                  <button onClick={() => sb.auth.signOut()} style={{ background: 'none', border: 'none', color: NAV.accent, cursor: 'pointer', fontSize: 10, fontWeight: 600, padding: 0 }}>Sair</button>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>
+                  <span style={{ color: state.dbOnline ? '#4caf82' : '#c97c3a', fontWeight: 600 }}>●</span>
+                  {' '}{state.dbOnline ? 'Supabase' : 'Local'}
+                </span>
+                <span style={{ opacity: 0.45, fontFamily: 'monospace', fontSize: 9.5, letterSpacing: '0.3px' }}>
+                  v{APP_VERSION}
+                </span>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'center' }}>
