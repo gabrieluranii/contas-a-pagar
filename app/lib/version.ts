@@ -9,33 +9,33 @@
  *   import { APP_VERSION, getVersionInfo } from "@/lib/version";
  * ──────────────────────────────────────────────────────────────
  */
-
+ 
 // ─── Constantes de versão ────────────────────────────────────
-
+ 
 /** Versão semântica atual do aplicativo (SemVer). */
 export const APP_VERSION = "1.0.0" as const;
-
+ 
 /** Nome público do aplicativo. */
 export const APP_NAME = "Contas a Pagar" as const;
-
+ 
 /** Tema visual ativo. */
 export const THEME = "Obsidian Ledger" as const;
-
+ 
 /** Data oficial de lançamento desta versão. */
-export const BUILD_DATE = new Date("2026-03-31") as const;
-
+export const BUILD_DATE = new Date("2026-03-31");
+ 
 // ─── Utilitários ─────────────────────────────────────────────
-
+ 
 /** Ambiente de execução atual. */
 export const ENVIRONMENT =
   (process.env.NODE_ENV as "development" | "production" | "test") ??
   "production";
-
+ 
 /** Prefixo de versão para exibição (ex: "v1.0.0"). */
 export const VERSION_TAG = `v${APP_VERSION}` as const;
-
+ 
 // ─── Tipo do objeto de informação de versão ──────────────────
-
+ 
 export interface VersionInfo {
   /** Versão semântica, ex: "1.0.0" */
   version: string;
@@ -54,9 +54,9 @@ export interface VersionInfo {
   /** Indica se está em ambiente de desenvolvimento */
   isDev: boolean;
 }
-
+ 
 // ─── Função principal ─────────────────────────────────────────
-
+ 
 /**
  * Retorna um objeto com todas as informações de versão do app.
  *
@@ -82,7 +82,7 @@ export function getVersionInfo(): VersionInfo {
     isDev: ENVIRONMENT === "development",
   };
 }
-
+ 
 // ─── Export padrão (conveniente para import simples) ─────────
-
+ 
 export default getVersionInfo;
