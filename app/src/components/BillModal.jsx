@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
 import { useApp } from '@/context/AppContext';
 import { fmt, fmtDate, todayISO, isOverdue, daysUntil, LAUNCH_DAYS } from '@/lib/utils';
+import { validateBill } from '@/lib/validation';
 
 const EXTRACTION_PROMPT = `Você é um extrator de dados de documentos financeiros brasileiros.
 O documento pode conter UMA NOTA FISCAL e UM BOLETO na mesma imagem (páginas diferentes coladas verticalmente).
@@ -187,12 +188,7 @@ export default function BillModal({ open, onClose, editId = null }) {
 
   // ── Save ──────────────────────────────────────────────────────────────────
   function handleSave() {
-    const errs = {};
-    if (!form.supplier.trim()) errs.supplier = true;
-    if (!parseFloat(form.value) || parseFloat(form.value) <= 0) errs.value = true;
-    if (!form.due) errs.due = true;
-    if (!form.base) errs.base = true;
-    if (!form.cat) errs.cat = true;
+    const errs = validateBill(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     const base = resolveBase();

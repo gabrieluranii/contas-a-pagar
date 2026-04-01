@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useApp } from '@/context/AppContext';
 import { fmt, fmtDate } from '@/lib/utils';
+import { validatePagamento } from '@/lib/validation';
 
 export default function PagarModal({ open, onClose, billId }) {
   const { state, dispatch } = useApp();
@@ -28,11 +29,7 @@ export default function PagarModal({ open, onClose, billId }) {
   }
 
   function handleConfirm() {
-    const errs = {};
-    if (!form.fluig.trim()) errs.fluig = true;
-    if (!form.gestor)       errs.gestor = true;
-    if (!form.nf.trim())    errs.nf = true;
-    if (!form.emission)     errs.emission = true;
+    const errs = validatePagamento(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     // Update bill

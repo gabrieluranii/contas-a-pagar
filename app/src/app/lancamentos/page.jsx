@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import { fmt, fmtDate, MONTH_NAMES, normalizeKey, parseExcelDate, parseMoneyValue, todayISO } from '@/lib/utils';
+import { validateLancamento } from '@/lib/validation';
 
 const LANC_COL_MAP = {
   'gestor': 'gestor',
@@ -126,9 +127,7 @@ function LancModal({ open, onClose, editId }) {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   function handleSave() {
-    const errs = {};
-    if (!form.supplier.trim()) errs.supplier = true;
-    if (!parseFloat(form.value) || parseFloat(form.value) <= 0) errs.value = true;
+    const errs = validateLancamento(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     const obj = {
