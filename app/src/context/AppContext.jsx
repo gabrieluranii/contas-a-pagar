@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
 import { sb, isSupabaseConfigured } from '@/lib/supabase';
 import { INITIAL_STATE } from '@/data/mockData';
 
@@ -167,6 +167,12 @@ export const useApp = () => {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
+};
+
+export const useAppSelector = (selectorFn) => {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useAppSelector must be used within AppProvider');
+  return useMemo(() => selectorFn(ctx.state), [ctx.state, selectorFn]);
 };
 
 // ── LOCALSTORAGE SAVE ─────────────────────────────────────────────────────────
