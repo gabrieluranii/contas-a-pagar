@@ -1,8 +1,5 @@
 import './globals.css';
-import { AppProvider } from '@/context/AppContext';
-import AuthGate from '@/components/AuthGate';
-import Navbar from '@/components/Navbar';
-
+import Providers from '@/components/Providers';
 
 export const metadata = {
   title: 'Contas a Pagar',
@@ -13,14 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <body>
-        <AppProvider>
-          <AuthGate>
-            <Navbar />
-            <main style={{ padding: '40px' }}>
-              {children}
-            </main>
-          </AuthGate>
-        </AppProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
