@@ -360,7 +360,7 @@ async function syncToRemote(state, dispatch) {
 
 // ── DB MAPPERS ────────────────────────────────────────────────────────────────
 const mapBillToDb = (b) => ({
-  supplier: b.supplier, value: b.value, emission: b.emission || null,
+  id: b.id, supplier: b.supplier, value: b.value, emission: b.emission || null,
   due: b.due, status: b.status, base: b.base, cat: b.cat,
   nfnum: b.nfnum || '', nfserie: b.nfserie || '', fluig: b.fluig || '',
   fluig_value: b.fluigVal, obs: b.obs || '', rateio: b.rateio || [],
@@ -376,7 +376,7 @@ const mapBillFromDb = (r) => ({
 });
 
 const mapTvoBillToDb = (b) => ({
-  supplier: b.supplier, value: b.value, emission: b.emission || null,
+  id: b.id, supplier: b.supplier, value: b.value, emission: b.emission || null,
   due: b.due, status: b.status || 'pending', base: b.base, cat: b.cat,
   nfnum: b.nfnum || '', nfserie: b.nfserie || '', fluig: b.fluig || '',
   tvo_stage: b.tvoStage || 'pending', rateio: b.rateio || [],
@@ -392,7 +392,7 @@ const mapTvoBillFromDb = (r) => ({
 });
 
 const mapLancToDb = (l) => ({
-  origin_bill_id: l.originBillId || null, gestor: l.gestor || '',
+  id: l.id, origin_bill_id: l.originBillId || null, gestor: l.gestor || '',
   solnum: l.solnum || '', soldate: l.soldate || null, supplier: l.supplier,
   nf: l.nf || '', emission: l.emission || null, due: l.due || null,
   descr: l.desc || '', cat: l.cat || '', value: l.value, tipopgto: l.tipopgto || '',
@@ -411,7 +411,7 @@ const mapLancFromDb = (r) => ({
 });
 
 const mapBaseToDb = (b) => ({
-  nome: b.nome, gestor: b.gestor || '', data: b.data || null,
+  id: b.id, nome: b.nome, gestor: b.gestor || '', data: b.data || null,
   mes: b.mes || '', desmobilizado: b.desmobilizado || false,
 });
 
@@ -421,7 +421,7 @@ const mapBaseFromDb = (r) => ({
 });
 
 const mapTvoRegToDb = (r) => ({
-  gestor: r.gestor || '', fluig: r.fluig || '', soldate: r.soldate || null,
+  id: r.id, gestor: r.gestor || '', fluig: r.fluig || '', soldate: r.soldate || null,
   value: r.value, tipo: r.tipo || 'TVO', produto: r.produto || '',
   cc: r.cc || '', origem: r.origem || 'Manual',
 });
