@@ -5,27 +5,8 @@ import { useApp } from '@/context/AppContext';
 import { fmt, fmtDate, todayISO, isOverdue, daysUntil, LAUNCH_DAYS } from '@/lib/utils';
 import { validateBill } from '@/lib/validation';
 
-const EXTRACTION_PROMPT = `Você é um extrator de dados de documentos financeiros brasileiros.
-O documento pode conter UMA NOTA FISCAL e UM BOLETO na mesma imagem (páginas diferentes coladas verticalmente).
-Responda SOMENTE com JSON válido, sem explicações ou markdown.
-REGRAS:
-- "tipo": "nf" | "boleto" | "merged"
-- "fornecedor": nome da empresa EMITENTE/PRESTADORA (quem cobra)
-- "valor": valor total a pagar
-- "emissao": data de emissão da NF (YYYY-MM-DD)
-- "vencimento": data de vencimento do BOLETO (YYYY-MM-DD)
-- "nfnum": número da nota fiscal
-- "nfserie": série da nota
-- "categoria": tipo do serviço
-- "observacao": descrição resumida
-Datas sempre em YYYY-MM-DD. Campos não encontrados = null.`;
-
-function fileIcon(name) {
-  const ext = (name || '').split('.').pop().toLowerCase();
-  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼';
-  if (ext === 'pdf') return '📄';
-  return '📎';
-}
+import ExtrasSection from './bill-modal/ExtrasSection';
+import AttachmentTab from './bill-modal/AttachmentTab';
 
 function FormRow({ children, full = false }) {
   return (
@@ -155,17 +136,7 @@ export default function BillModal({ open, onClose, editId = null }) {
     else setSaldoMsg({ type: 'empty', text: `✕ Sem saldo neste mês. Será enviado para TVO Pendente.` });
   }
 
-  // ── Rateio ────────────────────────────────────────────────────────────────
-  function addRateioLine() {
-    setRateioLines(l => [...l, { base: state.bases.filter(b => !b.desmobilizado)[0]?.nome || '', val: '', type: 'R$' }]);
-  }
-  function updateRatLine(idx, key, val) {
-    setRateioLines(l => l.map((r, i) => i === idx ? { ...r, [key]: val } : r));
-  }
-  function removeRatLine(idx) {
-    setRateioLines(l => l.filter((_, i) => i !== idx));
-  }
-
+  // ── Modal State & Flow ────────────────────────────────────────────────────
   // ── Resolve base/cat ──────────────────────────────────────────────────────
   function resolveBase() {
     if (form.base === '__new__') {
@@ -345,12 +316,7 @@ export default function BillModal({ open, onClose, editId = null }) {
   }
 
 
-  // ── Render rateio total ───────────────────────────────────────────────────
-  const billVal = parseFloat(form.value) || 0;
-  const rateioTotal = rateioLines.reduce((s, r) => {
-    const v = parseFloat(r.val) || 0;
-    return s + (r.type === '%' ? billVal * v / 100 : v);
-  }, 0);
+  // ── Formatters / Memo ─────────────────────────────────────────────────────
 
   const activeBases = state.bases.filter(b => !b.desmobilizado);
 
@@ -462,69 +428,14 @@ export default function BillModal({ open, onClose, editId = null }) {
           )}
 
           {/* ── EXTRAS ── */}
-          <div style={{ gridColumn: '1 / -1', background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: '1rem', marginTop: 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text3)', marginBottom: '0.75rem' }}>Opções extras</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-              {/* Rateio */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={rateioEnabled} onChange={e => { setRateioEnabled(e.target.checked); if (e.target.checked && rateioLines.length === 0) addRateioLine(); }} style={{ width: 16, height: 16, accentColor: 'var(--accent)', padding: 0, border: 'none' }}/>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>Rateio</span>
-              </label>
-              {/* TVO */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={tvoEnabled} onChange={e => setTvoEnabled(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--accent)', padding: 0, border: 'none' }}/>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>TVO</span>
-              </label>
-              {/* Contingência */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={contEnabled} onChange={e => setContEnabled(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--accent)', padding: 0, border: 'none' }}/>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>Contingência</span>
-              </label>
-            </div>
-
-            {/* Rateio lines */}
-            {rateioEnabled && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {rateioLines.map((r, i) => (
-                    <div key={i} className="rateio-line">
-                      <select value={r.base} onChange={e => updateRatLine(i, 'base', e.target.value)}>
-                        {activeBases.map(b => <option key={b.nome} value={b.nome}>{b.nome}</option>)}
-                      </select>
-                      <input type="number" placeholder="Valor" value={r.val} onChange={e => updateRatLine(i, 'val', e.target.value)} min="0" step="0.01"/>
-                      <select value={r.type} onChange={e => updateRatLine(i, 'type', e.target.value)} style={{ width: 70, padding: '7px 6px', fontSize: 12 }}>
-                        <option value="R$">R$</option>
-                        <option value="%">%</option>
-                      </select>
-                      <button onClick={() => removeRatLine(i)} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16 }}>×</button>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={addRateioLine} style={{ background: 'transparent', border: '1px dashed var(--border2)', borderRadius: 'var(--radius)', padding: '6px 12px', fontSize: 13, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', width: '100%', marginTop: 4 }}>
-                  + Adicionar linha de rateio
-                </button>
-                <div style={{ fontSize: 12, color: Math.abs(billVal - rateioTotal) > 0.01 ? 'var(--danger)' : 'var(--text3)', marginTop: 6 }}>
-                  Rateado: {fmt(rateioTotal)} de {fmt(billVal)}{Math.abs(billVal - rateioTotal) > 0.01 ? ` · Faltam ${fmt(billVal - rateioTotal)}` : ' · Completo ✓'}
-                </div>
-              </div>
-            )}
-
-            {/* TVO value */}
-            {tvoEnabled && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Valor TVO (R$)</label>
-                <input type="number" value={tvoValue} onChange={e => setTvoValue(e.target.value)} placeholder="0,00" style={{ padding: '7px 10px', fontSize: 13 }}/>
-              </div>
-            )}
-
-            {/* Contingência value */}
-            {contEnabled && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>Valor Contingência (R$)</label>
-                <input type="number" value={contValue} onChange={e => setContValue(e.target.value)} placeholder="0,00" style={{ padding: '7px 10px', fontSize: 13 }}/>
-              </div>
-            )}
-          </div>
+          <ExtrasSection
+            rateioEnabled={rateioEnabled} setRateioEnabled={setRateioEnabled}
+            rateioLines={rateioLines}     setRateioLines={setRateioLines}
+            tvoEnabled={tvoEnabled}       setTvoEnabled={setTvoEnabled}    tvoValue={tvoValue}       setTvoValue={setTvoValue}
+            contEnabled={contEnabled}     setContEnabled={setContEnabled}  contValue={contValue}     setContValue={setContValue}
+            billValue={parseFloat(form.value) || 0}
+            activeBases={activeBases}
+          />
 
           {/* Message */}
           {msg && (
@@ -535,49 +446,14 @@ export default function BillModal({ open, onClose, editId = null }) {
 
       {/* ── ATTACH TAB ── */}
       {tab === 'attach' && (
-        <div>
-          {/* Drop area */}
-          <div
-            onClick={() => fileRef.current?.click()}
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => { e.preventDefault(); processOCR(Array.from(e.dataTransfer.files)); }}
-            style={{
-              border: '1.5px dashed var(--border2)', borderRadius: 'var(--radius-lg)',
-              padding: '1.25rem', marginBottom: '1.25rem', textAlign: 'center',
-              cursor: 'pointer', transition: 'all 0.15s', background: 'var(--surface)',
-            }}
-          >
-            <input ref={fileRef} type="file" accept="image/*,.pdf" multiple onChange={e => processOCR(Array.from(e.target.files))} style={{ display: 'none' }}/>
-            <div style={{ fontSize: 14, color: 'var(--text2)' }}>
-              <strong style={{ color: 'var(--accent-text)' }}>Clique aqui ou arraste</strong> para fazer upload ou OCR
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>PDF, imagem • Extrai dados automaticamente via Gemini</div>
-          </div>
-
-          {/* OCR status */}
-          {ocrStatus && (
-            <div style={{ fontSize: 13, marginBottom: '1rem', color: ocrCls === 'loading' ? 'var(--warning)' : ocrCls === 'success' ? 'var(--accent)' : 'var(--danger)' }}>
-              {ocrStatus}
-            </div>
-          )}
-
-          {/* Attachment list */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {attachments.map((a, i) => (
-              <div key={i} className="attach-chip" style={{ maxWidth: 220 }}>
-                <span style={{ fontSize: 14, flexShrink: 0 }}>{fileIcon(a.name)}</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }} title={a.name}>{a.name}</span>
-                <button
-                  onClick={() => setAttachments(att => att.filter((_, j) => j !== i))}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}
-                >✕</button>
-              </div>
-            ))}
-            {attachments.length === 0 && (
-              <div style={{ fontSize: 13, color: 'var(--text3)' }}>Nenhum anexo</div>
-            )}
-          </div>
-        </div>
+        <AttachmentTab
+          attachments={attachments}
+          setAttachments={setAttachments}
+          processOCR={processOCR}
+          ocrStatus={ocrStatus}
+          ocrCls={ocrCls}
+          fileRef={fileRef}
+        />
       )}
 
       {/* Footer */}
