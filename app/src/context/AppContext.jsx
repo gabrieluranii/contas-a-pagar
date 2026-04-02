@@ -3,18 +3,25 @@ import { createContext, useContext, useReducer, useEffect, useRef, useCallback, 
 import { sb, isSupabaseConfigured, getUser } from '@/lib/supabase';
 import { INITIAL_STATE } from '@/data/mockData';
 
-// ── LOCALSTORAGE KEYS ─────────────────────────────────────────────────────────
-const LS = {
-  bills:       '_bills',
-  tvoBills:    '_tvo_bills',
-  lancamentos: '_lancamentos',
-  tvoRegistros:'_tvo_registros',
-  bases:       '_cc',
-  cats:        '_cats',
-  catDespesas: '_cat_despesas',
-  gestores:    '_gestores',
-  orcamentos:  '_orcamentos',
+// ── LOCALSTORAGE KEYS (prefixadas por user_id) ────────────────────────────────
+const LS_KEYS = {
+  bills:        '_bills',
+  tvoBills:     '_tvo_bills',
+  lancamentos:  '_lancamentos',
+  tvoRegistros: '_tvo_registros',
+  bases:        '_cc',
+  cats:         '_cats',
+  catDespesas:  '_cat_despesas',
+  gestores:     '_gestores',
+  orcamentos:   '_orcamentos',
 };
+
+function getLSKeys(uid) {
+  const prefix = uid ? `u_${uid}` : 'guest';
+  return Object.fromEntries(
+    Object.entries(LS_KEYS).map(([k, v]) => [k, `${prefix}${v}`])
+  );
+}
 
 // ── REDUCER ───────────────────────────────────────────────────────────────────
 function reducer(state, action) {
@@ -27,9 +34,6 @@ function reducer(state, action) {
       return { ...state, dbOnline: true, isSyncing: false };
     }
 
-    // Estratégia de Merge Seguro:
-    // Se o remoto retornar vazio para uma coleção que possui dados locais, mantemos o local.
-    // Isso evita o 'wipe' de dados quando o Supabase ainda não sincronizou ou está com RLS restritivo.
     const merged = {};
     Object.keys(data).forEach(key => {
       const incoming = data[key];
@@ -45,8 +49,13 @@ function reducer(state, action) {
   }
 
   const nextState = innerReducer(state, action);
-  const isDataMutation = action.type.startsWith('ADD_') || action.type.startsWith('UPDATE_') || action.type.startsWith('DELETE_') || action.type === 'SET_LANCS' || action.type === 'SET_TVO_REGS';
-  
+  const isDataMutation =
+    action.type.startsWith('ADD_') ||
+    action.type.startsWith('UPDATE_') ||
+    action.type.startsWith('DELETE_') ||
+    action.type === 'SET_LANCS' ||
+    action.type === 'SET_TVO_REGS';
+
   if (isDataMutation) {
     nextState.lastLocalEdit = Date.now();
   }
@@ -153,38 +162,53 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
   const syncTimer = useRef(null);
+  const currentUid = useRef(null);
 
-  // ── Load from localStorage ─────────────────────────────────────────────────
+  // ── Load: aguarda user_id para prefixar localStorage ──────────────────────
   useEffect(() => {
-    const get = (key, def = []) => {
-      try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
-    };
-    dispatch({
-      type: 'LOAD',
-      payload: {
-        bills:        get(LS.bills),
-        tvoBills:     get(LS.tvoBills),
-        lancamentos:  get(LS.lancamentos),
-        tvoRegistros: get(LS.tvoRegistros),
-        bases:        get(LS.bases),
-        cats:         get(LS.cats),
-        catDespesas:  get(LS.catDespesas),
-        gestores:     get(LS.gestores),
-        orcamentos:   get(LS.orcamentos),
-      },
-    });
+    async function init() {
+      // Pega o usuário logado
+      let uid = null;
+      if (isSupabaseConfigured() && sb) {
+        const user = await getUser();
+        uid = user?.id || null;
+      }
+      currentUid.current = uid;
 
-    // Try Supabase
-    if (isSupabaseConfigured()) {
-      loadRemote(dispatch);
+      const LS = getLSKeys(uid);
+      const get = (key, def = []) => {
+        try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
+      };
+
+      dispatch({
+        type: 'LOAD',
+        payload: {
+          bills:        get(LS.bills),
+          tvoBills:     get(LS.tvoBills),
+          lancamentos:  get(LS.lancamentos),
+          tvoRegistros: get(LS.tvoRegistros),
+          bases:        get(LS.bases),
+          cats:         get(LS.cats),
+          catDespesas:  get(LS.catDespesas),
+          gestores:     get(LS.gestores),
+          orcamentos:   get(LS.orcamentos),
+        },
+      });
+
+      // Carrega do Supabase
+      if (isSupabaseConfigured() && uid) {
+        loadRemote(dispatch);
+      }
     }
+
+    init();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Save to localStorage whenever state changes ────────────────────────────
+  // ── Save to localStorage e sync Supabase ──────────────────────────────────
   useEffect(() => {
     if (!state.loaded) return;
-    saveLocal(state, dispatch);
-    // Debounced Supabase sync
+    const LS = getLSKeys(currentUid.current);
+    saveLocal(state, dispatch, LS);
     if (state.dbOnline) {
       clearTimeout(syncTimer.current);
       syncTimer.current = setTimeout(() => syncToRemote(state, dispatch), 800);
@@ -211,7 +235,7 @@ export const useAppSelector = (selectorFn) => {
 };
 
 // ── LOCALSTORAGE SAVE ─────────────────────────────────────────────────────────
-function saveLocal(state, dispatch) {
+function saveLocal(state, dispatch, LS) {
   const data = {
     [LS.bills]:        JSON.stringify(state.bills),
     [LS.tvoBills]:     JSON.stringify(state.tvoBills),
@@ -224,21 +248,20 @@ function saveLocal(state, dispatch) {
     [LS.orcamentos]:   JSON.stringify(state.orcamentos),
   };
 
-  // Tentativa 1: salva tudo incluindo attachments
   try {
     Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v));
     return;
   } catch (e) {
-    if (e.name !== 'QuotaExceededError') return; // erro desconhecido, ignora
+    if (e.name !== 'QuotaExceededError') return;
   }
 
-  // Tentativa 2: salva sem attachments (fallback de quota)
+  // Fallback sem attachments
   const strip = (arr) => arr.map(({ attachments: _a, ...rest }) => rest);
   const slim = {
     [LS.bills]:        JSON.stringify(strip(state.bills)),
     [LS.tvoBills]:     JSON.stringify(strip(state.tvoBills)),
     [LS.lancamentos]:  JSON.stringify(strip(state.lancamentos)),
-    [LS.tvoRegistros]: JSON.stringify(state.tvoRegistros), // sem attachments
+    [LS.tvoRegistros]: JSON.stringify(state.tvoRegistros),
     [LS.bases]:        JSON.stringify(state.bases),
     [LS.cats]:         JSON.stringify(state.cats),
     [LS.catDespesas]:  JSON.stringify(state.catDespesas),
@@ -276,9 +299,7 @@ async function loadRemote(dispatch) {
     ]);
 
     const errorResult = results.find(r => r.error);
-    if (errorResult) {
-      throw errorResult.error;
-    }
+    if (errorResult) throw errorResult.error;
 
     const [
       { data: bills }, { data: tvoBills }, { data: lancamentos },
@@ -322,11 +343,11 @@ async function syncToRemote(state, dispatch) {
   const user = await getUser();
   if (!user || !user.id) {
     console.warn('Sync aborted: User not logged in');
+    dispatch({ type: 'SET', key: 'isSyncing', payload: false });
     return;
   }
   const uid = user.id;
 
-  // Helper: upsert por ID + delete IDs orfãos
   const syncById = async (table, localItems, toDb, idField = 'id') => {
     if (localItems.length > 0) {
       const { error: upsertErr } = await sb
@@ -334,7 +355,6 @@ async function syncToRemote(state, dispatch) {
         .upsert(localItems.map(item => toDb(item, uid)), { onConflict: idField });
       if (upsertErr) throw upsertErr;
     }
-    // Busca IDs remotos e deleta os que não existem mais localmente
     const { data: remote } = await sb.from(table).select(idField);
     const localIds = new Set(localItems.map(i => i[idField]));
     const orphans = (remote || []).map(r => r[idField]).filter(id => !localIds.has(id));
@@ -343,7 +363,6 @@ async function syncToRemote(state, dispatch) {
     }
   };
 
-  // Helper: upsert por name + delete names orfãos
   const syncByName = async (table, localNames) => {
     const items = localNames.map(name => ({ name, user_id: uid }));
     if (items.length > 0) {
@@ -360,7 +379,6 @@ async function syncToRemote(state, dispatch) {
     }
   };
 
-  // Tabelas com ID numérico
   const idTables = [
     { table: 'bills',         items: state.bills,        toDb: mapBillToDb },
     { table: 'tvo_bills',     items: state.tvoBills,     toDb: mapTvoBillToDb },
@@ -378,11 +396,10 @@ async function syncToRemote(state, dispatch) {
     }
   }
 
-  // Tabelas com chave 'name'
   const nameTables = [
-    { table: 'categories',  names: state.cats },
-    { table: 'gestores',    names: state.gestores },
-    { table: 'cat_despesas',names: state.catDespesas },
+    { table: 'categories',   names: state.cats },
+    { table: 'gestores',     names: state.gestores },
+    { table: 'cat_despesas', names: state.catDespesas },
   ];
 
   for (const { table, names } of nameTables) {
@@ -394,7 +411,7 @@ async function syncToRemote(state, dispatch) {
     }
   }
 
-  // Orçamentos: chave composta (base + cat + month), sem ID numérico
+  // Orçamentos: chave composta
   try {
     const localOrcs = state.orcamentos.map(o => ({ base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid }));
     if (localOrcs.length > 0) {
@@ -403,7 +420,6 @@ async function syncToRemote(state, dispatch) {
         .upsert(localOrcs, { onConflict: 'base,cat,month' });
       if (error) throw error;
     }
-    // Delete orcãos orfãos pela chave composta
     const { data: remoteOrcs } = await sb.from('orcamentos').select('base,cat,month');
     const localKey = new Set(state.orcamentos.map(o => `${o.base}|${o.cat}|${o.month}`));
     const orphanOrcs = (remoteOrcs || []).filter(r => !localKey.has(`${r.base}|${r.cat}|${r.month}`));
@@ -415,6 +431,7 @@ async function syncToRemote(state, dispatch) {
     console.error('Sync error [orcamentos]:', e);
     dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "orcamentos": ${e.message}` });
   }
+
   dispatch({ type: 'SET', key: 'isSyncing', payload: false });
 }
 
