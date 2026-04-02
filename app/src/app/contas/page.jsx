@@ -142,7 +142,18 @@ export default function ContasPage() {
       {/* Upcoming */}
       <Card title="Próximas a vencer">
         {upcoming.length > 0
-          ? <div className="bill-list">{upcoming.map(b => <BillRow key={b.id} bill={b} showActions={false}/>)}</div>
+          ? <div className="bill-list">
+              {upcoming.map(b => (
+                <BillRow
+                  key={b.id}
+                  bill={b}
+                  onToggle={handleToggle}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onView={handleEdit}
+                />
+              ))}
+            </div>
           : <EmptyState icon="🗓" text="Sem contas próximas a vencer"/>
         }
       </Card>
