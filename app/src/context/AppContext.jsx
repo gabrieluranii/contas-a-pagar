@@ -2,42 +2,11 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useMemo } from 'react';
 import { sb, isSupabaseConfigured, getUser } from '@/lib/supabase';
 
-// ── LOCALSTORAGE KEYS (prefixadas por user_id) ────────────────────────────────
-const LS_KEYS = {
-  bills:        '_bills',
-  tvoBills:     '_tvo_bills',
-  lancamentos:  '_lancamentos',
-  tvoRegistros: '_tvo_registros',
-  bases:        '_cc',
-  cats:         '_cats',
-  catDespesas:  '_cat_despesas',
-  gestores:     '_gestores',
-  orcamentos:   '_orcamentos',
-};
-
-function getLSKeys(uid) {
-  const prefix = uid ? `u_${uid}` : 'guest';
-  return Object.fromEntries(
-    Object.entries(LS_KEYS).map(([k, v]) => [k, `${prefix}${v}`])
-  );
-}
-
 // ── REDUCER ───────────────────────────────────────────────────────────────────
 function reducer(state, action) {
   if (action.type === 'LOAD') {
     const data = action.payload.data || action.payload;
-    const isRemote = !!action.payload.loadStartTime;
-
-    if (isRemote && state.lastLocalEdit && state.lastLocalEdit > action.payload.loadStartTime) {
-      console.warn('LOAD omitido: edição local ocorreu durante o fetch do Supabase.');
-      return { ...state, dbOnline: true, isSyncing: false };
-    }
-
-    if (isRemote) {
-      return { ...state, ...data, loaded: true, isSyncing: false, dbOnline: true };
-    }
-
-    return { ...state, ...data, loaded: true, isSyncing: false };
+    return { ...state, ...data, loaded: true, isSyncing: false, dbOnline: true };
   }
 
   const nextState = innerReducer(state, action);
@@ -139,12 +108,10 @@ function innerReducer(state, action) {
       return { ...state, bills: [] };
     case 'RESET_DATA':
       return {
-        ...state,
-        bills: [], tvoBills: [], lancamentos: [], tvoRegistros: [],
-        bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [],
-        loaded: false, dbOnline: false, lastLocalEdit: null,
-        // ── guarda o uid do usuário atual para o useEffect de save validar
-        _activeUid: action.uid ?? null,
+        ...INITIAL,
+        loaded: false,
+        dbOnline: false,
+        lastLocalEdit: null,
       };
     default:
       return state;
@@ -155,7 +122,6 @@ const INITIAL = {
   bills: [], tvoBills: [], lancamentos: [], tvoRegistros: [],
   bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [],
   dbOnline: false, loaded: false,
-  _activeUid: null,
 };
 
 // ── CONTEXT ───────────────────────────────────────────────────────────────────
@@ -163,60 +129,32 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
-  const syncTimer   = useRef(null);
-  const currentUid  = useRef(null);   // uid em vigor no momento
-  const savingUid   = useRef(null);   // uid para o qual o save está autorizado
-  const isSyncing   = useRef(false);  // guard contra sync em loop
+  const syncTimer  = useRef(null);
+  const isSyncing  = useRef(false);
+  const currentUid = useRef(null);
 
-  // ── Carrega dados para um uid específico ──────────────────────────────────
+  // ── Carrega dados do Supabase para o usuário logado ───────────────────────
   async function loadForUser(uid) {
-    // Atualiza as refs ANTES de qualquer dispatch para que o useEffect de
-    // save já encontre o novo uid e não grave os dados do usuário anterior.
     currentUid.current = uid;
-    savingUid.current  = uid;
+    dispatch({ type: 'RESET_DATA' });
 
-    const LS = getLSKeys(uid);
-
-    // Limpa estado (inclui _activeUid = uid para o guard de save)
-    dispatch({ type: 'RESET_DATA', uid });
-
-    const get = (key, def = []) => {
-      try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
-    };
-
-    // Carrega dados do localStorage deste usuário
-    dispatch({
-      type: 'LOAD',
-      payload: {
-        _activeUid:   uid,
-        bills:        get(LS.bills),
-        tvoBills:     get(LS.tvoBills),
-        lancamentos:  get(LS.lancamentos),
-        tvoRegistros: get(LS.tvoRegistros),
-        bases:        get(LS.bases),
-        cats:         get(LS.cats),
-        catDespesas:  get(LS.catDespesas),
-        gestores:     get(LS.gestores),
-        orcamentos:   get(LS.orcamentos),
-      },
-    });
-
-    // Carrega do Supabase se autenticado
-    if (isSupabaseConfigured() && uid) {
-      loadRemote(dispatch);
+    if (!uid || !isSupabaseConfigured()) {
+      dispatch({ type: 'SET', key: 'loaded', payload: true });
+      return;
     }
+
+    await loadRemote(dispatch);
   }
 
-  // ── Escuta mudanças de sessão do Supabase ─────────────────────────────────
+  // ── Escuta mudanças de sessão ─────────────────────────────────────────────
   useEffect(() => {
     if (!isSupabaseConfigured() || !sb) {
-      loadForUser(null);
+      dispatch({ type: 'SET', key: 'loaded', payload: true });
       return;
     }
 
     sb.auth.getSession().then(({ data: { session } }) => {
-      const uid = session?.user?.id || null;
-      loadForUser(uid);
+      loadForUser(session?.user?.id || null);
     });
 
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
@@ -229,21 +167,19 @@ export function AppProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Save para localStorage e sync Supabase ────────────────────────────────
+  // ── Sync para Supabase após mutações de dados ─────────────────────────────
+  // Observa apenas os arrays de dados, não o estado inteiro, evitando loop
   useEffect(() => {
-    // Só salva se os dados já foram carregados E o uid do estado bate com o
-    // uid atual (evita que dados de um usuário sobrescrevam os do outro)
     if (!state.loaded) return;
-    if (state._activeUid !== savingUid.current) return;
+    if (!state.dbOnline) return;
+    if (!currentUid.current) return;
 
-    const LS = getLSKeys(state._activeUid);
-    saveLocal(state, dispatch, LS);
-
-    if (state.dbOnline) {
-      clearTimeout(syncTimer.current);
-      syncTimer.current = setTimeout(() => syncToRemote(state, dispatch, isSyncing), 800);
-    }
-  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => syncToRemote(state, dispatch, isSyncing), 800);
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    state.bills, state.tvoBills, state.lancamentos, state.tvoRegistros,
+    state.bases, state.cats, state.catDespesas, state.gestores, state.orcamentos,
+  ]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
@@ -264,54 +200,9 @@ export const useAppSelector = (selectorFn) => {
   return useMemo(() => selectorFn(ctx.state), [ctx.state, selectorFn]);
 };
 
-// ── LOCALSTORAGE SAVE ─────────────────────────────────────────────────────────
-function saveLocal(state, dispatch, LS) {
-  const data = {
-    [LS.bills]:        JSON.stringify(state.bills),
-    [LS.tvoBills]:     JSON.stringify(state.tvoBills),
-    [LS.lancamentos]:  JSON.stringify(state.lancamentos),
-    [LS.tvoRegistros]: JSON.stringify(state.tvoRegistros),
-    [LS.bases]:        JSON.stringify(state.bases),
-    [LS.cats]:         JSON.stringify(state.cats),
-    [LS.catDespesas]:  JSON.stringify(state.catDespesas),
-    [LS.gestores]:     JSON.stringify(state.gestores),
-    [LS.orcamentos]:   JSON.stringify(state.orcamentos),
-  };
-
-  try {
-    Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v));
-    return;
-  } catch (e) {
-    if (e.name !== 'QuotaExceededError') return;
-  }
-
-  const strip = (arr) => arr.map(({ attachments: _a, ...rest }) => rest);
-  const slim = {
-    [LS.bills]:        JSON.stringify(strip(state.bills)),
-    [LS.tvoBills]:     JSON.stringify(strip(state.tvoBills)),
-    [LS.lancamentos]:  JSON.stringify(strip(state.lancamentos)),
-    [LS.tvoRegistros]: JSON.stringify(state.tvoRegistros),
-    [LS.bases]:        JSON.stringify(state.bases),
-    [LS.cats]:         JSON.stringify(state.cats),
-    [LS.catDespesas]:  JSON.stringify(state.catDespesas),
-    [LS.gestores]:     JSON.stringify(state.gestores),
-    [LS.orcamentos]:   JSON.stringify(state.orcamentos),
-  };
-  try {
-    Object.entries(slim).forEach(([k, v]) => localStorage.setItem(k, v));
-    if (dispatch) dispatch({
-      type: 'SET', key: 'storageWarning',
-      payload: 'Anexos não salvos localmente — espaço insuficiente.',
-    });
-  } catch (e2) {
-    console.error('localStorage save failed even without attachments:', e2);
-  }
-}
-
 // ── SUPABASE LOAD ─────────────────────────────────────────────────────────────
 async function loadRemote(dispatch) {
   if (!sb) return;
-  const loadStartTime = Date.now();
   dispatch({ type: 'SET', key: 'isSyncing', payload: true });
   dispatch({ type: 'SET', key: 'syncError', payload: null });
   try {
@@ -339,7 +230,6 @@ async function loadRemote(dispatch) {
     dispatch({
       type: 'LOAD',
       payload: {
-        loadStartTime,
         data: {
           bills:        (bills || []).map(mapBillFromDb),
           tvoBills:     (tvoBills || []).map(mapTvoBillFromDb),
@@ -355,59 +245,59 @@ async function loadRemote(dispatch) {
     });
     dispatch({ type: 'SET_ONLINE', payload: true });
   } catch (e) {
-    console.warn('Supabase load failed, using localStorage:', e.message);
+    console.warn('Supabase load failed:', e.message);
     dispatch({ type: 'SET_ONLINE', payload: false });
     dispatch({ type: 'SET', key: 'isSyncing', payload: false });
-    dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao carregar dados remotos: ${e.message}` });
+    dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao carregar: ${e.message}` });
+    dispatch({ type: 'SET', key: 'loaded', payload: true });
   }
 }
 
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 async function syncToRemote(state, dispatch, isSyncingRef) {
   if (!sb) return;
-  if (isSyncingRef.current) return;  // já está sincronizando, ignora
+  if (isSyncingRef.current) return;
 
   isSyncingRef.current = true;
-  dispatch({ type: 'SET', key: 'isSyncing', payload: true });
   dispatch({ type: 'SET', key: 'syncError', payload: null });
 
   const user = await getUser();
-  if (!user || !user.id) {
-    console.warn('Sync aborted: User not logged in');
+  if (!user?.id) {
     isSyncingRef.current = false;
-    dispatch({ type: 'SET', key: 'isSyncing', payload: false });
     return;
   }
   const uid = user.id;
 
+  // Sync por ID — filtra delete apenas pelo próprio user_id
   const syncById = async (table, localItems, toDb, idField = 'id') => {
     if (localItems.length > 0) {
-      const { error: upsertErr } = await sb
+      const { error } = await sb
         .from(table)
         .upsert(localItems.map(item => toDb(item, uid)), { onConflict: idField });
-      if (upsertErr) throw upsertErr;
+      if (error) throw error;
     }
-    const { data: remote } = await sb.from(table).select(idField);
+    const { data: remote } = await sb.from(table).select(idField).eq('user_id', uid);
     const localIds = new Set(localItems.map(i => i[idField]));
     const orphans = (remote || []).map(r => r[idField]).filter(id => !localIds.has(id));
     if (orphans.length > 0) {
-      await sb.from(table).delete().in(idField, orphans);
+      await sb.from(table).delete().eq('user_id', uid).in(idField, orphans);
     }
   };
 
+  // Sync por nome — filtra delete apenas pelo próprio user_id
   const syncByName = async (table, localNames) => {
     const items = localNames.map(name => ({ name, user_id: uid }));
     if (items.length > 0) {
-      const { error: upsertErr } = await sb
+      const { error } = await sb
         .from(table)
         .upsert(items, { onConflict: 'name,user_id' });
-      if (upsertErr) throw upsertErr;
+      if (error) throw error;
     }
-    const { data: remote } = await sb.from(table).select('name');
+    const { data: remote } = await sb.from(table).select('name').eq('user_id', uid);
     const localSet = new Set(localNames);
     const orphans = (remote || []).map(r => r.name).filter(n => !localSet.has(n));
     if (orphans.length > 0) {
-      await sb.from(table).delete().in('name', orphans);
+      await sb.from(table).delete().eq('user_id', uid).in('name', orphans);
     }
   };
 
@@ -443,6 +333,7 @@ async function syncToRemote(state, dispatch, isSyncingRef) {
     }
   }
 
+  // Orçamentos
   try {
     const localOrcs = state.orcamentos.map(o => ({
       base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid
@@ -453,11 +344,12 @@ async function syncToRemote(state, dispatch, isSyncingRef) {
         .upsert(localOrcs, { onConflict: 'base,cat,month,user_id' });
       if (error) throw error;
     }
-    const { data: remoteOrcs } = await sb.from('orcamentos').select('base,cat,month');
+    const { data: remoteOrcs } = await sb.from('orcamentos').select('base,cat,month').eq('user_id', uid);
     const localKey = new Set(state.orcamentos.map(o => `${o.base}|${o.cat}|${o.month}`));
     const orphanOrcs = (remoteOrcs || []).filter(r => !localKey.has(`${r.base}|${r.cat}|${r.month}`));
     for (const o of orphanOrcs) {
       await sb.from('orcamentos').delete()
+        .eq('user_id', uid)
         .eq('base', o.base).eq('cat', o.cat).eq('month', o.month);
     }
   } catch (e) {
@@ -466,7 +358,6 @@ async function syncToRemote(state, dispatch, isSyncingRef) {
   }
 
   isSyncingRef.current = false;
-  dispatch({ type: 'SET', key: 'isSyncing', payload: false });
 }
 
 // ── DB MAPPERS ────────────────────────────────────────────────────────────────
