@@ -179,20 +179,24 @@ export function AppProvider({ children }) {
         try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
       };
 
-      dispatch({
-        type: 'LOAD',
-        payload: {
-          bills:        get(LS.bills),
-          tvoBills:     get(LS.tvoBills),
-          lancamentos:  get(LS.lancamentos),
-          tvoRegistros: get(LS.tvoRegistros),
-          bases:        get(LS.bases),
-          cats:         get(LS.cats),
-          catDespesas:  get(LS.catDespesas),
-          gestores:     get(LS.gestores),
-          orcamentos:   get(LS.orcamentos),
-        },
-      });
+      // Antes do dispatch LOAD, reseta o estado para evitar merge com dados de outro usuário
+    dispatch({
+      type: 'LOAD',
+      payload: {
+        loadStartTime,
+        data: {
+          bills:        (bills || []).map(mapBillFromDb),
+          tvoBills:     (tvoBills || []).map(mapTvoBillFromDb),
+          lancamentos:  (lancamentos || []).map(mapLancFromDb),
+          tvoRegistros: (tvoRegistros || []).map(mapTvoRegFromDb),
+          bases:        (bases || []).map(mapBaseFromDb),
+          cats:         (cats || []).map(r => r.name),
+          gestores:     (gestores || []).map(r => r.name),
+          catDespesas:  (catDespesas || []).map(r => r.name),
+          orcamentos:   (orcamentos || []).map(r => ({ base: r.base, cat: r.cat, month: r.month, value: r.value })),
+        }
+      },
+    });
 
       if (isSupabaseConfigured() && uid) {
         loadRemote(dispatch);
