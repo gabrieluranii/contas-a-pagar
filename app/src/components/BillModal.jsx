@@ -136,7 +136,6 @@ export default function BillModal({ open, onClose, editId = null }) {
     else setSaldoMsg({ type: 'empty', text: `✕ Sem saldo neste mês. Será enviado para TVO Pendente.` });
   }
 
-  // ── Modal State & Flow ────────────────────────────────────────────────────
   // ── Resolve base/cat ──────────────────────────────────────────────────────
   function resolveBase() {
     if (form.base === '__new__') {
@@ -178,7 +177,6 @@ export default function BillModal({ open, onClose, editId = null }) {
       obs: form.obs, attachments,
     };
 
-    // Check saldo → TVO Pendente
     if (!editId && tvoEnabled) {
       dispatch({ type: 'ADD_TVO_BILL', payload: { ...billObj, tvoStage: 'pending' } });
       showMsg('Lançamento enviado para TVO Pendente.', 'var(--warning)');
@@ -208,9 +206,36 @@ export default function BillModal({ open, onClose, editId = null }) {
     setTimeout(() => { setMsg(''); onClose?.(); }, 1800);
   }
 
-  // ── OCR via Gemini ────────────────────────────────────────────────────────
+  // ── Converte PDF para imagem no browser ───────────────────────────────────
+  async function pdfToImageBase64(file) {
+    if (!window.pdfjsLib) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 2.0 });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    return canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+  }
+
+  // ── OCR via Groq ──────────────────────────────────────────────────────────
   async function processOCR(files) {
-    // Adiciona todos os arquivos aos anexos primeiro
     for (const file of files) {
       const b64full = await fileToBase64Full(file);
       setAttachments(a => [...a.filter(x => x.name !== file.name), { name: file.name, type: file.type, data: b64full }]);
@@ -219,18 +244,18 @@ export default function BillModal({ open, onClose, editId = null }) {
     setOcrStatus(`Processando ${files.length} arquivo(s)...`); setOcrCls('loading');
     try {
       for (const file of files) {
-        const b64 = await fileToBase64(file);
+        let b64, mime;
 
-        // Determina o mime type correto
-        let mime;
-        if (file.type === 'application/pdf') {
-          mime = 'application/pdf';
-        } else if (file.type.startsWith('image/')) {
-          mime = file.type;
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+          setOcrStatus('Convertendo PDF...'); 
+          b64 = await pdfToImageBase64(file);
+          mime = 'image/jpeg';
         } else {
-          // fallback: tenta como pdf se extensão for .pdf, senão image/jpeg
-          mime = file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg';
+          b64 = await fileToBase64(file);
+          mime = file.type || 'image/jpeg';
         }
+
+        setOcrStatus('Extraindo dados com IA...');
 
         const res = await fetch('/api/ocr', {
           method: 'POST',
@@ -245,13 +270,10 @@ export default function BillModal({ open, onClose, editId = null }) {
 
         const data = await res.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-        // Remove markdown code fences
         const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
         let parsed = {};
         try {
-          // Tenta extrair JSON mesmo que haja texto ao redor
           const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
           if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
           else throw new Error('Sem JSON na resposta');
@@ -299,9 +321,6 @@ export default function BillModal({ open, onClose, editId = null }) {
     });
   }
 
-
-  // ── Formatters / Memo ─────────────────────────────────────────────────────
-
   const activeBases = state.bases.filter(b => !b.desmobilizado);
 
   return (
@@ -327,7 +346,6 @@ export default function BillModal({ open, onClose, editId = null }) {
       {/* ── FORM TAB ── */}
       {tab === 'form' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {/* OCR preview */}
           {ocrPreview && (
             <div style={{ gridColumn: '1 / -1', background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: 13, color: 'var(--text2)', borderLeft: '3px solid var(--accent)', marginBottom: 4 }}>
               <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>Dados extraídos via OCR</strong>
@@ -397,21 +415,17 @@ export default function BillModal({ open, onClose, editId = null }) {
             </Sel>
           </FormRow>
 
-
-
           <FormRow full>
             <Label>Observações</Label>
             <textarea id="f-obs" value={form.obs} onChange={e => setF('obs', e.target.value)} placeholder="Observações..." rows={2} style={{ resize: 'vertical' }}/>
           </FormRow>
 
-          {/* Saldo check */}
           {saldoMsg && (
             <div style={{ gridColumn: '1 / -1', fontSize: 12, padding: '6px 10px', borderRadius: 'var(--radius)', background: saldoMsg.type === 'ok' ? 'var(--accent-light)' : saldoMsg.type === 'warn' ? 'var(--warning-light)' : 'var(--danger-light)', color: saldoMsg.type === 'ok' ? 'var(--accent-text)' : saldoMsg.type === 'warn' ? 'var(--warning)' : 'var(--danger)' }}>
               {saldoMsg.text}
             </div>
           )}
 
-          {/* ── EXTRAS ── */}
           <ExtrasSection
             rateioEnabled={rateioEnabled} setRateioEnabled={setRateioEnabled}
             rateioLines={rateioLines}     setRateioLines={setRateioLines}
@@ -421,7 +435,6 @@ export default function BillModal({ open, onClose, editId = null }) {
             activeBases={activeBases}
           />
 
-          {/* Message */}
           {msg && (
             <div style={{ gridColumn: '1 / -1', fontSize: 13, color: msgColor, fontWeight: 500 }}>{msg}</div>
           )}
