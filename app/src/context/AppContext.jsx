@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, useMemo } from 'react';
 import { sb, isSupabaseConfigured, getUser } from '@/lib/supabase';
 import { INITIAL_STATE } from '@/data/mockData';
 
@@ -167,7 +167,6 @@ export function AppProvider({ children }) {
   // ── Load: aguarda user_id para prefixar localStorage ──────────────────────
   useEffect(() => {
     async function init() {
-      // Pega o usuário logado
       let uid = null;
       if (isSupabaseConfigured() && sb) {
         const user = await getUser();
@@ -195,7 +194,6 @@ export function AppProvider({ children }) {
         },
       });
 
-      // Carrega do Supabase
       if (isSupabaseConfigured() && uid) {
         loadRemote(dispatch);
       }
@@ -363,12 +361,13 @@ async function syncToRemote(state, dispatch) {
     }
   };
 
+  // onConflict agora usa 'name,user_id' para isolar por usuário
   const syncByName = async (table, localNames) => {
     const items = localNames.map(name => ({ name, user_id: uid }));
     if (items.length > 0) {
       const { error: upsertErr } = await sb
         .from(table)
-        .upsert(items, { onConflict: 'name' });
+        .upsert(items, { onConflict: 'name,user_id' });
       if (upsertErr) throw upsertErr;
     }
     const { data: remote } = await sb.from(table).select('name');
@@ -411,13 +410,15 @@ async function syncToRemote(state, dispatch) {
     }
   }
 
-  // Orçamentos: chave composta
+  // Orçamentos: chave composta (base + cat + month + user_id)
   try {
-    const localOrcs = state.orcamentos.map(o => ({ base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid }));
+    const localOrcs = state.orcamentos.map(o => ({
+      base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid
+    }));
     if (localOrcs.length > 0) {
       const { error } = await sb
         .from('orcamentos')
-        .upsert(localOrcs, { onConflict: 'base,cat,month' });
+        .upsert(localOrcs, { onConflict: 'base,cat,month,user_id' });
       if (error) throw error;
     }
     const { data: remoteOrcs } = await sb.from('orcamentos').select('base,cat,month');
