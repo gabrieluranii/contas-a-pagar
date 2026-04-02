@@ -64,7 +64,7 @@ export default function AuthGate({ children }) {
   if (!session) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
         background: THEME.bg, fontFamily: 'Inter, sans-serif'
       }}>
         <div style={{
