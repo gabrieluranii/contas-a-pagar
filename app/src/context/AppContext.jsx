@@ -19,11 +19,29 @@ const LS = {
 // ── REDUCER ───────────────────────────────────────────────────────────────────
 function reducer(state, action) {
   if (action.type === 'LOAD') {
-    if (action.payload.loadStartTime && state.lastLocalEdit && state.lastLocalEdit > action.payload.loadStartTime) {
+    const data = action.payload.data || action.payload;
+    const isRemote = !!action.payload.loadStartTime;
+
+    if (isRemote && state.lastLocalEdit && state.lastLocalEdit > action.payload.loadStartTime) {
       console.warn('LOAD omitido: edição local ocorreu durante o fetch do Supabase.');
       return { ...state, dbOnline: true, isSyncing: false };
     }
-    return { ...state, ...action.payload.data, loaded: true, isSyncing: false, dbOnline: true };
+
+    // Estratégia de Merge Seguro:
+    // Se o remoto retornar vazio para uma coleção que possui dados locais, mantemos o local.
+    // Isso evita o 'wipe' de dados quando o Supabase ainda não sincronizou ou está com RLS restritivo.
+    const merged = {};
+    Object.keys(data).forEach(key => {
+      const incoming = data[key];
+      const current  = state[key];
+      if (isRemote && Array.isArray(incoming) && incoming.length === 0 && Array.isArray(current) && current.length > 0) {
+        merged[key] = current;
+      } else {
+        merged[key] = incoming;
+      }
+    });
+
+    return { ...state, ...merged, loaded: true, isSyncing: false, dbOnline: true };
   }
 
   const nextState = innerReducer(state, action);
