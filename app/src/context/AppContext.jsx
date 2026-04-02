@@ -163,9 +163,10 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
-  const syncTimer = useRef(null);
-  const currentUid = useRef(null);   // uid em vigor no momento
-  const savingUid  = useRef(null);   // uid para o qual o save está autorizado
+  const syncTimer   = useRef(null);
+  const currentUid  = useRef(null);   // uid em vigor no momento
+  const savingUid   = useRef(null);   // uid para o qual o save está autorizado
+  const isSyncing   = useRef(false);  // guard contra sync em loop
 
   // ── Carrega dados para um uid específico ──────────────────────────────────
   async function loadForUser(uid) {
@@ -240,7 +241,7 @@ export function AppProvider({ children }) {
 
     if (state.dbOnline) {
       clearTimeout(syncTimer.current);
-      syncTimer.current = setTimeout(() => syncToRemote(state, dispatch), 800);
+      syncTimer.current = setTimeout(() => syncToRemote(state, dispatch, isSyncing), 800);
     }
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -362,15 +363,18 @@ async function loadRemote(dispatch) {
 }
 
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
-async function syncToRemote(state, dispatch) {
+async function syncToRemote(state, dispatch, isSyncingRef) {
   if (!sb) return;
+  if (isSyncingRef.current) return;  // já está sincronizando, ignora
 
+  isSyncingRef.current = true;
   dispatch({ type: 'SET', key: 'isSyncing', payload: true });
   dispatch({ type: 'SET', key: 'syncError', payload: null });
 
   const user = await getUser();
   if (!user || !user.id) {
     console.warn('Sync aborted: User not logged in');
+    isSyncingRef.current = false;
     dispatch({ type: 'SET', key: 'isSyncing', payload: false });
     return;
   }
@@ -461,6 +465,7 @@ async function syncToRemote(state, dispatch) {
     dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "orcamentos": ${e.message}` });
   }
 
+  isSyncingRef.current = false;
   dispatch({ type: 'SET', key: 'isSyncing', payload: false });
 }
 
