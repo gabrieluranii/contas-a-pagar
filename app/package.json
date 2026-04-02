@@ -1,6 +1,6 @@
 {
   "name": "contas-a-pagar",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "Dashboard de contas a pagar - Obsidian Ledger",
   "private": true,
   "scripts": {

@@ -225,11 +225,7 @@ function saveLocal(state, dispatch) {
 async function loadRemote(dispatch) {
   if (!sb) return;
   try {
-    const [
-      { data: bills }, { data: tvoBills }, { data: lancamentos },
-      { data: tvoRegistros }, { data: bases }, { data: cats },
-      { data: gestores }, { data: catDespesas }, { data: orcamentos },
-    ] = await Promise.all([
+    const results = await Promise.all([
       sb.from('bills').select('*'),
       sb.from('tvo_bills').select('*'),
       sb.from('lancamentos').select('*'),
@@ -240,6 +236,17 @@ async function loadRemote(dispatch) {
       sb.from('cat_despesas').select('*'),
       sb.from('orcamentos').select('*'),
     ]);
+
+    const errorResult = results.find(r => r.error);
+    if (errorResult) {
+      throw errorResult.error;
+    }
+
+    const [
+      { data: bills }, { data: tvoBills }, { data: lancamentos },
+      { data: tvoRegistros }, { data: bases }, { data: cats },
+      { data: gestores }, { data: catDespesas }, { data: orcamentos },
+    ] = results;
 
     dispatch({
       type: 'LOAD',
