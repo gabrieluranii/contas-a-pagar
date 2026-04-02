@@ -13,6 +13,27 @@ Campos requeridos:
 Retorne APENAS o JSON vazio se não entender nada.
 `;
 
+async function pdfToImageBase64(pdfBase64) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = false;
+
+  const pdfData = Buffer.from(pdfBase64, 'base64');
+  const loadingTask = pdfjs.getDocument({ data: pdfData });
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(1);
+
+  const scale = 2.0;
+  const viewport = page.getViewport({ scale });
+
+  const { createCanvas } = await import('canvas');
+  const canvas = createCanvas(viewport.width, viewport.height);
+  const context = canvas.getContext('2d');
+
+  await page.render({ canvasContext: context, viewport }).promise;
+
+  return canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+}
+
 export async function POST(req) {
   try {
     const { mimeType, base64Data } = await req.json();
@@ -29,8 +50,14 @@ export async function POST(req) {
       );
     }
 
-    // Groq aceita imagens mas não PDF direto — converte PDF para indicar como imagem
-    const mediaType = mimeType === 'application/pdf' ? 'image/jpeg' : mimeType;
+    // Se for PDF, converte a primeira página para imagem
+    let imageBase64 = base64Data;
+    let imageMime = mimeType;
+
+    if (mimeType === 'application/pdf') {
+      imageBase64 = await pdfToImageBase64(base64Data);
+      imageMime = 'image/jpeg';
+    }
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -47,7 +74,7 @@ export async function POST(req) {
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:${mediaType};base64,${base64Data}`,
+                  url: `data:${imageMime};base64,${imageBase64}`,
                 },
               },
               {
@@ -71,20 +98,13 @@ export async function POST(req) {
     }
 
     const data = await res.json();
-
-    // Adapta resposta do Groq para o mesmo formato que o frontend espera
     const text = data.choices?.[0]?.message?.content || '{}';
+
     return NextResponse.json({
-      candidates: [
-        {
-          content: {
-            parts: [{ text }],
-          },
-        },
-      ],
+      candidates: [{ content: { parts: [{ text }] } }],
     });
   } catch (error) {
     console.error('Erro na rota OCR:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Erro interno do servidor' }, { status: 500 });
   }
 }
