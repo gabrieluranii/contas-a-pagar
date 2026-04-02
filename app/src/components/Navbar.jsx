@@ -369,9 +369,16 @@ export default function Navbar() {
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>
-                  <span style={{ color: state.dbOnline ? '#4caf82' : '#c97c3a', fontWeight: 600 }}>●</span>
-                  {' '}{state.dbOnline ? 'Supabase' : 'Local'}
+                <span title={state.syncError || ''} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ 
+                    color: state.syncError ? '#ef4444' : (state.dbOnline ? '#4caf82' : '#c97c3a'), 
+                    fontWeight: 600,
+                    opacity: state.isSyncing ? 0.5 : 1,
+                    transition: 'opacity 0.3s'
+                  }}>●</span>
+                  <span>
+                    {state.isSyncing ? 'Sincronizando...' : (state.syncError ? 'Erro no Sync' : (state.dbOnline ? 'Supabase' : 'Local'))}
+                  </span>
                 </span>
                 <span style={{ opacity: 0.45, fontFamily: 'monospace', fontSize: 9.5, letterSpacing: '0.3px' }}>
                   v{APP_VERSION}
@@ -379,8 +386,14 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <span style={{ color: state.dbOnline ? '#4caf82' : '#c97c3a', fontWeight: 600, fontSize: 10 }}>●</span>
+            <div style={{ display: 'flex', justifyContent: 'center' }} title={state.syncError || (state.isSyncing ? 'Sincronizando...' : (state.dbOnline ? 'Supabase' : 'Local'))}>
+              <span style={{ 
+                color: state.syncError ? '#ef4444' : (state.dbOnline ? '#4caf82' : '#c97c3a'), 
+                fontWeight: 600, 
+                fontSize: 10,
+                opacity: state.isSyncing ? 0.5 : 1,
+                transition: 'opacity 0.3s'
+              }}>●</span>
             </div>
           )}
         </div>

@@ -18,8 +18,25 @@ const LS = {
 
 // ── REDUCER ───────────────────────────────────────────────────────────────────
 function reducer(state, action) {
+  if (action.type === 'LOAD') {
+    if (action.payload.loadStartTime && state.lastLocalEdit && state.lastLocalEdit > action.payload.loadStartTime) {
+      console.warn('LOAD omitido: edição local ocorreu durante o fetch do Supabase.');
+      return { ...state, dbOnline: true, isSyncing: false };
+    }
+    return { ...state, ...action.payload.data, loaded: true, isSyncing: false, dbOnline: true };
+  }
+
+  const nextState = innerReducer(state, action);
+  const isDataMutation = action.type.startsWith('ADD_') || action.type.startsWith('UPDATE_') || action.type.startsWith('DELETE_') || action.type === 'SET_LANCS' || action.type === 'SET_TVO_REGS';
+  
+  if (isDataMutation) {
+    nextState.lastLocalEdit = Date.now();
+  }
+  return nextState;
+}
+
+function innerReducer(state, action) {
   switch (action.type) {
-    case 'LOAD':        return { ...state, ...action.payload, loaded: true };
     case 'SET_ONLINE':  return { ...state, dbOnline: action.payload };
     case 'SET':         return { ...state, [action.key]: action.payload };
     case 'ADD_BILL':
@@ -224,6 +241,9 @@ function saveLocal(state, dispatch) {
 // ── SUPABASE LOAD ─────────────────────────────────────────────────────────────
 async function loadRemote(dispatch) {
   if (!sb) return;
+  const loadStartTime = Date.now();
+  dispatch({ type: 'SET', key: 'isSyncing', payload: true });
+  dispatch({ type: 'SET', key: 'syncError', payload: null });
   try {
     const results = await Promise.all([
       sb.from('bills').select('*'),
@@ -251,28 +271,35 @@ async function loadRemote(dispatch) {
     dispatch({
       type: 'LOAD',
       payload: {
-        bills:        (bills || []).map(mapBillFromDb),
-        tvoBills:     (tvoBills || []).map(mapTvoBillFromDb),
-        lancamentos:  (lancamentos || []).map(mapLancFromDb),
-        tvoRegistros: (tvoRegistros || []).map(mapTvoRegFromDb),
-        bases:        (bases || []).map(mapBaseFromDb),
-        cats:         (cats || []).map(r => r.name),
-        gestores:     (gestores || []).map(r => r.name),
-        catDespesas:  (catDespesas || []).map(r => r.name),
-        orcamentos:   (orcamentos || []).map(r => ({ base: r.base, cat: r.cat, month: r.month, value: r.value })),
-        dbOnline: true,
+        loadStartTime,
+        data: {
+          bills:        (bills || []).map(mapBillFromDb),
+          tvoBills:     (tvoBills || []).map(mapTvoBillFromDb),
+          lancamentos:  (lancamentos || []).map(mapLancFromDb),
+          tvoRegistros: (tvoRegistros || []).map(mapTvoRegFromDb),
+          bases:        (bases || []).map(mapBaseFromDb),
+          cats:         (cats || []).map(r => r.name),
+          gestores:     (gestores || []).map(r => r.name),
+          catDespesas:  (catDespesas || []).map(r => r.name),
+          orcamentos:   (orcamentos || []).map(r => ({ base: r.base, cat: r.cat, month: r.month, value: r.value })),
+        }
       },
     });
     dispatch({ type: 'SET_ONLINE', payload: true });
   } catch (e) {
     console.warn('Supabase load failed, using localStorage:', e.message);
     dispatch({ type: 'SET_ONLINE', payload: false });
+    dispatch({ type: 'SET', key: 'isSyncing', payload: false });
+    dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao carregar dados remotos: ${e.message}` });
   }
 }
 
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 async function syncToRemote(state, dispatch) {
   if (!sb) return;
+
+  dispatch({ type: 'SET', key: 'isSyncing', payload: true });
+  dispatch({ type: 'SET', key: 'syncError', payload: null });
 
   const user = await getUser();
   if (!user || !user.id) {
@@ -370,6 +397,7 @@ async function syncToRemote(state, dispatch) {
     console.error('Sync error [orcamentos]:', e);
     dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "orcamentos": ${e.message}` });
   }
+  dispatch({ type: 'SET', key: 'isSyncing', payload: false });
 }
 
 // ── DB MAPPERS ────────────────────────────────────────────────────────────────
