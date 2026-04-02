@@ -210,9 +210,6 @@ export default function BillModal({ open, onClose, editId = null }) {
 
   // ── OCR via Gemini ────────────────────────────────────────────────────────
   async function processOCR(files) {
-    const key = localStorage.getItem('gemini_key') || '';
-    if (!key) { setOcrStatus('Configure a chave Gemini em Configurações → Chave API'); setOcrCls('error'); return; }
-
     // Adiciona todos os arquivos aos anexos primeiro
     for (const file of files) {
       const b64full = await fileToBase64Full(file);
@@ -235,28 +232,15 @@ export default function BillModal({ open, onClose, editId = null }) {
           mime = file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg';
         }
 
-        // Gemini 2.0 Flash suporta PDFs e imagens nativamente
-        const model = mime === 'application/pdf' ? 'gemini-2.0-flash' : 'gemini-2.0-flash';
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+        const res = await fetch('/api/ocr', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { inline_data: { mime_type: mime, data: b64 } },
-                { text: EXTRACTION_PROMPT },
-              ],
-            }],
-          }),
+          body: JSON.stringify({ mimeType: mime, base64Data: b64 }),
         });
 
         if (!res.ok) {
           const err = await res.json();
-          const msg = err.error?.message || `Erro HTTP ${res.status}`;
-          if (res.status === 429 || msg.toLowerCase().includes('quota')) {
-            throw new Error('Cota da API do Gemini excedida. Por favor, aguarde 1 minuto ou verifique sua chave nas configurações.');
-          }
-          throw new Error(msg);
+          throw new Error(err.error || `Erro HTTP ${res.status}`);
         }
 
         const data = await res.json();
