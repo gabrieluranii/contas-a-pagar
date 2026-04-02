@@ -1,7 +1,6 @@
 'use client';
 import { createContext, useContext, useReducer, useEffect, useRef, useMemo } from 'react';
 import { sb, isSupabaseConfigured, getUser } from '@/lib/supabase';
-import { INITIAL_STATE } from '@/data/mockData';
 
 // ── LOCALSTORAGE KEYS (prefixadas por user_id) ────────────────────────────────
 const LS_KEYS = {
@@ -34,18 +33,13 @@ function reducer(state, action) {
       return { ...state, dbOnline: true, isSyncing: false };
     }
 
-    const merged = {};
-    Object.keys(data).forEach(key => {
-      const incoming = data[key];
-      const current  = state[key];
-      if (isRemote && Array.isArray(incoming) && incoming.length === 0 && Array.isArray(current) && current.length > 0) {
-        merged[key] = current;
-      } else {
-        merged[key] = incoming;
-      }
-    });
+    // Se for remoto, sempre usa dados do servidor sem merge
+    if (isRemote) {
+      return { ...state, ...data, loaded: true, isSyncing: false, dbOnline: true };
+    }
 
-    return { ...state, ...merged, loaded: true, isSyncing: false, dbOnline: true };
+    // Se for local, usa normalmente
+    return { ...state, ...data, loaded: true, isSyncing: false };
   }
 
   const nextState = innerReducer(state, action);
@@ -145,6 +139,13 @@ function innerReducer(state, action) {
       };
     case 'CLEAR_BILLS':
       return { ...state, bills: [] };
+    case 'RESET_DATA':
+      return {
+        ...state,
+        bills: [], tvoBills: [], lancamentos: [], tvoRegistros: [],
+        bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [],
+        loaded: false, dbOnline: false, lastLocalEdit: null,
+      };
     default:
       return state;
   }
@@ -164,46 +165,64 @@ export function AppProvider({ children }) {
   const syncTimer = useRef(null);
   const currentUid = useRef(null);
 
-  // ── Load: aguarda user_id para prefixar localStorage ──────────────────────
-  useEffect(() => {
-    async function init() {
-      let uid = null;
-      if (isSupabaseConfigured() && sb) {
-        const user = await getUser();
-        uid = user?.id || null;
-      }
-      currentUid.current = uid;
+  // ── Função que carrega dados para um uid específico ───────────────────────
+  async function loadForUser(uid) {
+    currentUid.current = uid;
+    const LS = getLSKeys(uid);
 
-      const LS = getLSKeys(uid);
-      const get = (key, def = []) => {
-        try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
-      };
+    const get = (key, def = []) => {
+      try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
+    };
 
-      // Antes do dispatch LOAD, reseta o estado para evitar merge com dados de outro usuário
+    // Reseta o estado antes de carregar novos dados
+    dispatch({ type: 'RESET_DATA' });
+
+    // Carrega do localStorage do usuário
     dispatch({
       type: 'LOAD',
       payload: {
-        loadStartTime,
-        data: {
-          bills:        (bills || []).map(mapBillFromDb),
-          tvoBills:     (tvoBills || []).map(mapTvoBillFromDb),
-          lancamentos:  (lancamentos || []).map(mapLancFromDb),
-          tvoRegistros: (tvoRegistros || []).map(mapTvoRegFromDb),
-          bases:        (bases || []).map(mapBaseFromDb),
-          cats:         (cats || []).map(r => r.name),
-          gestores:     (gestores || []).map(r => r.name),
-          catDespesas:  (catDespesas || []).map(r => r.name),
-          orcamentos:   (orcamentos || []).map(r => ({ base: r.base, cat: r.cat, month: r.month, value: r.value })),
-        }
+        bills:        get(LS.bills),
+        tvoBills:     get(LS.tvoBills),
+        lancamentos:  get(LS.lancamentos),
+        tvoRegistros: get(LS.tvoRegistros),
+        bases:        get(LS.bases),
+        cats:         get(LS.cats),
+        catDespesas:  get(LS.catDespesas),
+        gestores:     get(LS.gestores),
+        orcamentos:   get(LS.orcamentos),
       },
     });
 
-      if (isSupabaseConfigured() && uid) {
-        loadRemote(dispatch);
-      }
+    // Carrega do Supabase se autenticado
+    if (isSupabaseConfigured() && uid) {
+      loadRemote(dispatch);
+    }
+  }
+
+  // ── Escuta mudanças de sessão do Supabase ─────────────────────────────────
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !sb) {
+      // Sem Supabase, carrega como guest
+      loadForUser(null);
+      return;
     }
 
-    init();
+    // Pega sessão inicial
+    sb.auth.getSession().then(({ data: { session } }) => {
+      const uid = session?.user?.id || null;
+      loadForUser(uid);
+    });
+
+    // Escuta mudanças de auth (login/logout)
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      const uid = session?.user?.id || null;
+      if (uid !== currentUid.current) {
+        // Usuário mudou (login ou logout) — recarrega dados
+        loadForUser(uid);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Save to localStorage e sync Supabase ──────────────────────────────────
@@ -365,7 +384,6 @@ async function syncToRemote(state, dispatch) {
     }
   };
 
-  // onConflict agora usa 'name,user_id' para isolar por usuário
   const syncByName = async (table, localNames) => {
     const items = localNames.map(name => ({ name, user_id: uid }));
     if (items.length > 0) {
@@ -414,7 +432,7 @@ async function syncToRemote(state, dispatch) {
     }
   }
 
-  // Orçamentos: chave composta (base + cat + month + user_id)
+  // Orçamentos: chave composta
   try {
     const localOrcs = state.orcamentos.map(o => ({
       base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid
