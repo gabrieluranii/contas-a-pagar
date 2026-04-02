@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
-import { sb, isSupabaseConfigured } from '@/lib/supabase';
+import { sb, isSupabaseConfigured, getUser } from '@/lib/supabase';
 import { INITIAL_STATE } from '@/data/mockData';
 
 // ── LOCALSTORAGE KEYS ─────────────────────────────────────────────────────────
@@ -274,12 +274,19 @@ async function loadRemote(dispatch) {
 async function syncToRemote(state, dispatch) {
   if (!sb) return;
 
+  const user = await getUser();
+  if (!user || !user.id) {
+    console.warn('Sync aborted: User not logged in');
+    return;
+  }
+  const uid = user.id;
+
   // Helper: upsert por ID + delete IDs orfãos
   const syncById = async (table, localItems, toDb, idField = 'id') => {
     if (localItems.length > 0) {
       const { error: upsertErr } = await sb
         .from(table)
-        .upsert(localItems.map(toDb), { onConflict: idField });
+        .upsert(localItems.map(item => toDb(item, uid)), { onConflict: idField });
       if (upsertErr) throw upsertErr;
     }
     // Busca IDs remotos e deleta os que não existem mais localmente
@@ -293,7 +300,7 @@ async function syncToRemote(state, dispatch) {
 
   // Helper: upsert por name + delete names orfãos
   const syncByName = async (table, localNames) => {
-    const items = localNames.map(name => ({ name }));
+    const items = localNames.map(name => ({ name, user_id: uid }));
     if (items.length > 0) {
       const { error: upsertErr } = await sb
         .from(table)
@@ -344,7 +351,7 @@ async function syncToRemote(state, dispatch) {
 
   // Orçamentos: chave composta (base + cat + month), sem ID numérico
   try {
-    const localOrcs = state.orcamentos.map(o => ({ base: o.base, cat: o.cat, month: o.month, value: o.value }));
+    const localOrcs = state.orcamentos.map(o => ({ base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid }));
     if (localOrcs.length > 0) {
       const { error } = await sb
         .from('orcamentos')
@@ -366,8 +373,8 @@ async function syncToRemote(state, dispatch) {
 }
 
 // ── DB MAPPERS ────────────────────────────────────────────────────────────────
-const mapBillToDb = (b) => ({
-  id: b.id, supplier: b.supplier, value: b.value, emission: b.emission || null,
+const mapBillToDb = (b, uid) => ({
+  id: b.id, user_id: uid, supplier: b.supplier, value: b.value, emission: b.emission || null,
   due: b.due, status: b.status, base: b.base, cat: b.cat,
   nfnum: b.nfnum || '', nfserie: b.nfserie || '', fluig: b.fluig || '',
   fluig_value: b.fluigVal, obs: b.obs || '', rateio: b.rateio || [],
@@ -382,8 +389,8 @@ const mapBillFromDb = (r) => ({
   attachments: r.attachments || [],
 });
 
-const mapTvoBillToDb = (b) => ({
-  id: b.id, supplier: b.supplier, value: b.value, emission: b.emission || null,
+const mapTvoBillToDb = (b, uid) => ({
+  id: b.id, user_id: uid, supplier: b.supplier, value: b.value, emission: b.emission || null,
   due: b.due, status: b.status || 'pending', base: b.base, cat: b.cat,
   nfnum: b.nfnum || '', nfserie: b.nfserie || '', fluig: b.fluig || '',
   tvo_stage: b.tvoStage || 'pending', rateio: b.rateio || [],
@@ -398,8 +405,8 @@ const mapTvoBillFromDb = (r) => ({
   tvo: r.tvo, conting: r.conting, attachments: r.attachments || [],
 });
 
-const mapLancToDb = (l) => ({
-  id: l.id, origin_bill_id: l.originBillId || null, gestor: l.gestor || '',
+const mapLancToDb = (l, uid) => ({
+  id: l.id, user_id: uid, origin_bill_id: l.originBillId || null, gestor: l.gestor || '',
   solnum: l.solnum || '', soldate: l.soldate || null, supplier: l.supplier,
   nf: l.nf || '', emission: l.emission || null, due: l.due || null,
   descr: l.desc || '', cat: l.cat || '', value: l.value, tipopgto: l.tipopgto || '',
@@ -417,8 +424,8 @@ const mapLancFromDb = (r) => ({
   attachments: r.attachments || [], origemPagamento: r.origem_pagamento,
 });
 
-const mapBaseToDb = (b) => ({
-  id: b.id, nome: b.nome, gestor: b.gestor || '', data: b.data || null,
+const mapBaseToDb = (b, uid) => ({
+  id: b.id, user_id: uid, nome: b.nome, gestor: b.gestor || '', data: b.data || null,
   mes: b.mes || '', desmobilizado: b.desmobilizado || false,
 });
 
@@ -427,8 +434,8 @@ const mapBaseFromDb = (r) => ({
   mes: r.mes, desmobilizado: r.desmobilizado,
 });
 
-const mapTvoRegToDb = (r) => ({
-  id: r.id, gestor: r.gestor || '', fluig: r.fluig || '', soldate: r.soldate || null,
+const mapTvoRegToDb = (r, uid) => ({
+  id: r.id, user_id: uid, gestor: r.gestor || '', fluig: r.fluig || '', soldate: r.soldate || null,
   value: r.value, tipo: r.tipo || 'TVO', produto: r.produto || '',
   cc: r.cc || '', origem: r.origem || 'Manual',
 });
