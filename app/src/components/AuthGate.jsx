@@ -68,7 +68,7 @@ export default function AuthGate({ children }) {
         background: THEME.bg, fontFamily: 'Inter, sans-serif'
       }}>
         <div style={{
-          background: THEME.surface, border: `1px solid ${THEME.border}`,
+          background: '#f0eeeb', border: `1px solid ${THEME.border}`,
           padding: '2rem', borderRadius: 12, width: '100%', maxWidth: 400,
           boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
         }}>
