@@ -24,6 +24,7 @@ export default function ContasListaPage() {
 
   const [billModalOpen, setBillModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [pagarModalOpen, setPagarModalOpen] = useState(false);
   const [pagarBillId, setPagarBillId] = useState(null);
   const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
@@ -50,7 +51,8 @@ export default function ContasListaPage() {
     if (b.status === 'paid') dispatch({ type: 'UPDATE_BILL', payload: { ...b, status: 'pending' } });
     else { setPagarBillId(id); setPagarModalOpen(true); }
   }
-  function handleEdit(id) { setEditId(id); setBillModalOpen(true); }
+  function handleEdit(id) { setEditId(id); setIsReadOnly(false); setBillModalOpen(true); }
+  function handleView(id) { setEditId(id); setIsReadOnly(true); setBillModalOpen(true); }
   function handleDelete(id) {
     setConfirmCfg({
       isOpen: true,
@@ -70,7 +72,7 @@ export default function ContasListaPage() {
           <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px', lineHeight: 1.2 }}>Lançamentos</div>
           <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>Todos os seus registros</div>
         </div>
-        <button onClick={() => { setEditId(null); setBillModalOpen(true); }} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
+        <button onClick={() => { setEditId(null); setIsReadOnly(false); setBillModalOpen(true); }} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
           + Novo lançamento
         </button>
       </div>
@@ -115,7 +117,7 @@ export default function ContasListaPage() {
       {/* List */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '0 1.5rem' }}>
         {list.length > 0
-          ? list.map(b => <BillRow key={b.id} bill={b} onToggle={handleToggle} onEdit={handleEdit} onDelete={handleDelete} onView={handleEdit}/>)
+          ? list.map(b => <BillRow key={b.id} bill={b} onToggle={handleToggle} onEdit={handleEdit} onDelete={handleDelete} onView={handleView}/>)
           : (
             <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text3)', fontSize: 14 }}>
               <div style={{ fontSize: 32, marginBottom: '0.75rem', color: '#cccccc' }}>📋</div>
@@ -125,7 +127,7 @@ export default function ContasListaPage() {
         }
       </div>
 
-      <BillModal open={billModalOpen} onClose={() => { setBillModalOpen(false); setEditId(null); }} editId={editId}/>
+      <BillModal open={billModalOpen} onClose={() => { setBillModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly}/>
       <PagarModal open={pagarModalOpen} onClose={() => { setPagarModalOpen(false); setPagarBillId(null); }} billId={pagarBillId}/>
       
       <ConfirmModal 

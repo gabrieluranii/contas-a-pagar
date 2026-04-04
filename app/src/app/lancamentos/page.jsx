@@ -56,7 +56,7 @@ function NewBtn({ onClick }) {
   );
 }
 
-function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete }) {
+function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, onView }) {
   const [hov, setHov] = useState(false);
   const bg = selected.has(l.id) ? 'rgba(217,119,87,0.1)'
            : hov                ? '#fff4ef'
@@ -87,6 +87,12 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete })
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.ccpgto || '—'}</td>
       <td>
         <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={onView} title="Visualizar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', padding: 4 }}>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
           <button onClick={onEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d97757', padding: 4 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -100,7 +106,7 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete })
   );
 }
 
-function LancModal({ open, onClose, editId }) {
+function LancModal({ open, onClose, editId, readOnly = false }) {
   const { state, dispatch } = useApp();
   const [form, setForm] = useState({
     gestor: '', solnum: '', soldate: '', supplier: '', nf: '', emission: '',
@@ -147,7 +153,7 @@ function LancModal({ open, onClose, editId }) {
   const activeBases = state.bases.filter(b => !b.desmobilizado);
 
   return (
-    <Modal open={open} onClose={onClose} title={editId ? 'Editar lançamento' : 'Novo lançamento'} wide>
+    <Modal open={open} onClose={onClose} title={readOnly ? 'Visualizar lançamento' : editId ? 'Editar lançamento' : 'Novo lançamento'} wide>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {[
           { k: 'gestor', label: 'Gestor', type: 'select', opts: state.gestores },
@@ -165,25 +171,46 @@ function LancModal({ open, onClose, editId }) {
           <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{label}{req && <span style={{ color: 'var(--danger)' }}> *</span>}</label>
             {opts ? (
-              <select value={form[k]} onChange={e => setF(k, e.target.value)} className={errors[k] ? 'field-error' : ''}>
+              <select value={form[k]} onChange={e => setF(k, e.target.value)} className={errors[k] ? 'field-error' : ''} disabled={readOnly}>
                 <option value="">Selecione...</option>
                 {opts.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             ) : (
-              <input type={type || 'text'} value={form[k]} onChange={e => setF(k, e.target.value)} className={errors[k] ? 'field-error' : ''}/>
+              <input 
+                type={type || 'text'} value={form[k]} 
+                onChange={e => setF(k, e.target.value)} 
+                className={errors[k] ? 'field-error' : ''}
+                disabled={readOnly}
+                style={{ 
+                  background: readOnly ? 'var(--surface2)' : '#fff',
+                  color: readOnly ? '#777' : '#333'
+                }}
+              />
             )}
           </div>
         ))}
         <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
-          <textarea value={form.desc} onChange={e => setF('desc', e.target.value)} rows={2} style={{ resize: 'vertical' }}/>
+          <textarea 
+            value={form.desc} onChange={e => setF('desc', e.target.value)} 
+            rows={2} disabled={readOnly}
+            style={{ 
+              resize: 'vertical',
+              background: readOnly ? 'var(--surface2)' : '#fff',
+              color: readOnly ? '#777' : '#333'
+            }}
+          />
         </div>
       </div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-        <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>Cancelar</button>
-        <button onClick={handleSave} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
-          {editId ? 'Salvar' : 'Criar lançamento'}
+        <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+          {readOnly ? 'Fechar' : 'Cancelar'}
         </button>
+        {!readOnly && (
+          <button onClick={handleSave} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
+            {editId ? 'Salvar' : 'Criar lançamento'}
+          </button>
+        )}
       </div>
     </Modal>
   );
@@ -193,6 +220,7 @@ export default function LancamentosPage() {
   const { state, dispatch } = useApp();
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [yearF, setYearF] = useState('');
   const [monthF, setMonthF] = useState('');
   const [gestorF, setGestorF] = useState('');
@@ -300,7 +328,7 @@ export default function LancamentosPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <ImportBtn importRef={importRef} importExcel={importExcel}/>
-          <NewBtn onClick={() => { setEditId(null); setModalOpen(true); }}/>
+          <NewBtn onClick={() => { setEditId(null); setIsReadOnly(false); setModalOpen(true); }}/>
         </div>
         {importMsg && <div style={{ width: '100%', fontSize: 12, color: importMsg.startsWith('✓') ? 'var(--accent)' : 'var(--danger)' }}>{importMsg}</div>}
       </div>
@@ -375,7 +403,8 @@ export default function LancamentosPage() {
                   bulkMode={bulkMode}
                   selected={selected}
                   toggleSelect={toggleSelect}
-                  onEdit={() => { setEditId(l.id); setModalOpen(true); }}
+                  onView={() => { setEditId(l.id); setIsReadOnly(true); setModalOpen(true); }}
+                  onEdit={() => { setEditId(l.id); setIsReadOnly(false); setModalOpen(true); }}
                   onDelete={() => setConfirmCfg({ 
                     isOpen: true, 
                     message: 'Excluir este lançamento?', 
@@ -388,7 +417,7 @@ export default function LancamentosPage() {
         </div>
       </div>
 
-      <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId}/>
+      <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly}/>
       
       <ConfirmModal 
         isOpen={confirmCfg.isOpen}

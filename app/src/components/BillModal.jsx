@@ -30,20 +30,34 @@ function Inp({ id, type = 'text', placeholder, value, onChange, error, disabled 
       id={id} type={type} placeholder={placeholder || ''} value={value || ''}
       onChange={onChange} disabled={disabled}
       className={error ? 'field-error' : ''}
-      style={{ background: disabled ? 'var(--surface2)' : 'var(--surface)', color: disabled ? 'var(--text3)' : 'var(--text)' }}
+      style={{
+        background: disabled ? 'var(--surface2)' : 'var(--surface)',
+        color: disabled ? 'var(--text3)' : 'var(--text)',
+        cursor: disabled ? 'not-allowed' : 'auto',
+        opacity: disabled ? 0.7 : 1
+      }}
     />
   );
 }
 
-function Sel({ id, value, onChange, children, error }) {
+function Sel({ id, value, onChange, children, error, disabled }) {
   return (
-    <select id={id} value={value || ''} onChange={onChange} className={error ? 'field-error' : ''}>
+    <select 
+      id={id} value={value || ''} onChange={onChange} 
+      className={error ? 'field-error' : ''} disabled={disabled}
+      style={{
+        background: disabled ? 'var(--surface2)' : 'var(--surface)',
+        color: disabled ? 'var(--text3)' : 'var(--text)',
+        cursor: disabled ? 'not-allowed' : 'auto',
+        opacity: disabled ? 0.7 : 1
+      }}
+    >
       {children}
     </select>
   );
 }
 
-export default function BillModal({ open, onClose, editId = null }) {
+export default function BillModal({ open, onClose, editId = null, readOnly = false }) {
   const { state, dispatch } = useApp();
   const [tab, setTab] = useState('form');
 
@@ -324,7 +338,7 @@ export default function BillModal({ open, onClose, editId = null }) {
   const activeBases = state.bases.filter(b => !b.desmobilizado);
 
   return (
-    <Modal open={open} onClose={onClose} title={editId ? 'Editar lançamento' : 'Novo lançamento'} wide>
+    <Modal open={open} onClose={onClose} title={readOnly ? 'Visualizar lançamento' : editId ? 'Editar lançamento' : 'Novo lançamento'} wide>
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '1.25rem', marginTop: '-0.5rem' }}>
         {[['form','Formulário'],['attach','Anexos / OCR']].map(([t, label]) => (
@@ -355,37 +369,37 @@ export default function BillModal({ open, onClose, editId = null }) {
 
           <FormRow full>
             <Label required>Fornecedor</Label>
-            <Inp id="f-supplier" value={form.supplier} onChange={e => setF('supplier', e.target.value)} error={errors.supplier} placeholder="Nome do fornecedor"/>
+            <Inp id="f-supplier" value={form.supplier} onChange={e => setF('supplier', e.target.value)} error={errors.supplier} placeholder="Nome do fornecedor" disabled={readOnly}/>
           </FormRow>
 
           <FormRow>
             <Label required>Valor (R$)</Label>
-            <Inp id="f-value" type="number" value={form.value} onChange={e => setF('value', e.target.value)} error={errors.value} placeholder="0,00"/>
+            <Inp id="f-value" type="number" value={form.value} onChange={e => setF('value', e.target.value)} error={errors.value} placeholder="0,00" disabled={readOnly}/>
           </FormRow>
 
           <FormRow>
             <Label required>Vencimento</Label>
-            <Inp id="f-due" type="date" value={form.due} onChange={e => setF('due', e.target.value)} error={errors.due}/>
+            <Inp id="f-due" type="date" value={form.due} onChange={e => setF('due', e.target.value)} error={errors.due} disabled={readOnly}/>
           </FormRow>
 
           <FormRow>
             <Label>Emissão</Label>
-            <Inp id="f-emission" type="date" value={form.emission} onChange={e => setF('emission', e.target.value)}/>
+            <Inp id="f-emission" type="date" value={form.emission} onChange={e => setF('emission', e.target.value)} disabled={readOnly}/>
           </FormRow>
 
           <FormRow>
             <Label>Nº Nota Fiscal</Label>
-            <Inp id="f-nfnum" value={form.nfnum} onChange={e => setF('nfnum', e.target.value)} placeholder="Ex: 5369"/>
+            <Inp id="f-nfnum" value={form.nfnum} onChange={e => setF('nfnum', e.target.value)} placeholder="Ex: 5369" disabled={readOnly}/>
           </FormRow>
 
           <FormRow>
             <Label>Série NF</Label>
-            <Inp id="f-nfserie" value={form.nfserie} onChange={e => setF('nfserie', e.target.value)} placeholder="Ex: 1"/>
+            <Inp id="f-nfserie" value={form.nfserie} onChange={e => setF('nfserie', e.target.value)} placeholder="Ex: 1" disabled={readOnly}/>
           </FormRow>
 
           <FormRow>
             <Label required>Centro de Custo</Label>
-            <Sel id="f-base" value={form.base} onChange={e => { setF('base', e.target.value); checkSaldo(); }} error={errors.base}>
+            <Sel id="f-base" value={form.base} onChange={e => { setF('base', e.target.value); checkSaldo(); }} error={errors.base} disabled={readOnly}>
               <option value="">Sem base</option>
               {activeBases.map(b => <option key={b.nome} value={b.nome}>{b.nome}</option>)}
               <option value="__new__">+ Nova base...</option>
@@ -397,7 +411,7 @@ export default function BillModal({ open, onClose, editId = null }) {
 
           <FormRow>
             <Label required>Categoria</Label>
-            <Sel id="f-cat" value={form.cat} onChange={e => { setF('cat', e.target.value); checkSaldo(); }} error={errors.cat}>
+            <Sel id="f-cat" value={form.cat} onChange={e => { setF('cat', e.target.value); checkSaldo(); }} error={errors.cat} disabled={readOnly}>
               <option value="">Sem categoria</option>
               {state.cats.map(c => <option key={c} value={c}>{c}</option>)}
               <option value="__new__">+ Nova categoria...</option>
@@ -409,7 +423,7 @@ export default function BillModal({ open, onClose, editId = null }) {
 
           <FormRow>
             <Label>Status</Label>
-            <Sel id="f-status" value={form.status} onChange={e => setF('status', e.target.value)}>
+            <Sel id="f-status" value={form.status} onChange={e => setF('status', e.target.value)} disabled={readOnly}>
               <option value="pending">Pendente</option>
               <option value="paid">Pago</option>
             </Sel>
@@ -417,7 +431,17 @@ export default function BillModal({ open, onClose, editId = null }) {
 
           <FormRow full>
             <Label>Observações</Label>
-            <textarea id="f-obs" value={form.obs} onChange={e => setF('obs', e.target.value)} placeholder="Observações..." rows={2} style={{ resize: 'vertical' }}/>
+          <textarea 
+            id="f-obs" value={form.obs} onChange={e => setF('obs', e.target.value)} 
+            placeholder="Observações..." rows={2} disabled={readOnly}
+            style={{ 
+              resize: 'vertical', 
+              background: readOnly ? 'var(--surface2)' : 'var(--surface)', 
+              color: readOnly ? 'var(--text3)' : 'var(--text)', 
+              opacity: readOnly ? 0.7 : 1,
+              cursor: readOnly ? 'not-allowed' : 'auto'
+            }}
+          />
           </FormRow>
 
           {saldoMsg && (
@@ -458,9 +482,11 @@ export default function BillModal({ open, onClose, editId = null }) {
         <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
           Cancelar
         </button>
-        <button onClick={handleSave} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
-          {editId ? 'Salvar alterações' : 'Salvar lançamento'}
-        </button>
+        {!readOnly && (
+          <button onClick={handleSave} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
+            {editId ? 'Salvar alterações' : 'Salvar lançamento'}
+          </button>
+        )}
       </div>
     </Modal>
   );

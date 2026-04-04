@@ -52,6 +52,7 @@ export default function ContasPage() {
   const { state, dispatch } = useApp();
   const [billModalOpen, setBillModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [pagarModalOpen, setPagarModalOpen] = useState(false);
   const [pagarBillId, setPagarBillId] = useState(null);
   const [dateStr, setDateStr] = useState('');
@@ -90,7 +91,7 @@ export default function ContasPage() {
     if (b.status === 'paid') dispatch({ type: 'UPDATE_BILL', payload: { ...b, status: 'pending' } });
     else { setPagarBillId(id); setPagarModalOpen(true); }
   }
-  function handleEdit(id) { setEditId(id); setBillModalOpen(true); }
+  function handleEdit(id) { setEditId(id); setIsReadOnly(false); setBillModalOpen(true); }
   function handleDelete(id) {
     setConfirmCfg({
       isOpen: true,
@@ -98,7 +99,7 @@ export default function ContasPage() {
       onConfirm: () => dispatch({ type: 'DELETE_BILL', payload: id })
     });
   }
-  function handleView(id) { handleEdit(id); }
+  function handleView(id) { setEditId(id); setIsReadOnly(true); setBillModalOpen(true); }
 
   const allUrgent = [...overdue, ...actionNeeded.filter(b => !isOverdue(b.due, b.status))];
 
@@ -109,7 +110,7 @@ export default function ContasPage() {
         <div>
           <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px', lineHeight: 1.2 }}>Pagamentos Pendentes</div>
         </div>
-        <PageBtn onClick={() => { setEditId(null); setBillModalOpen(true); }}/>
+        <PageBtn onClick={() => { setEditId(null); setIsReadOnly(false); setBillModalOpen(true); }}/>
       </div>
 
       {/* Metrics */}
@@ -172,7 +173,7 @@ export default function ContasPage() {
         }
       </Card>
 
-      <BillModal open={billModalOpen} onClose={() => { setBillModalOpen(false); setEditId(null); }} editId={editId}/>
+      <BillModal open={billModalOpen} onClose={() => { setBillModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly}/>
       <PagarModal open={pagarModalOpen} onClose={() => { setPagarModalOpen(false); setPagarBillId(null); }} billId={pagarBillId}/>
       
       <ConfirmModal 
