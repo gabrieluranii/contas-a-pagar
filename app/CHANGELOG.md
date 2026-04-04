@@ -9,6 +9,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.3.9] - 2026-04-04
+
+### Changed
+- Substituição total dos diálogos nativos `window.confirm` por um componente `ConfirmModal` customizado com tema dark, animações e maior consistência visual no projeto.
+- Melhoria no fluxo de exclusão (individual e em massa) com feedback visual integrado.
+
 ## [1.3.8] - 2026-04-04
 
 ### Added
@@ -118,7 +124,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.8...HEAD
+[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.9...HEAD
+[1.3.9]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.8...v1.3.9
 [1.3.8]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.5...v1.3.6
