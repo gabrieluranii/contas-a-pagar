@@ -10,6 +10,30 @@ function fileIcon(name) {
 export default function AttachmentTab({
   attachments, setAttachments, processOCR, ocrStatus, ocrCls, fileRef
 }) {
+  const handlePreview = (a) => {
+    if (a.url) {
+      window.open(a.url, '_blank');
+      return;
+    }
+    if (a.data) {
+      try {
+        const parts = a.data.split(',');
+        const mime = parts[0].split(':')[1].split(';')[0];
+        const b64 = parts[1];
+        const bytes = atob(b64);
+        const array = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) array[i] = bytes.charCodeAt(i);
+        const blob = new Blob([array], { type: mime });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (e) {
+        alert('Erro ao processar visualização');
+      }
+      return;
+    }
+    alert('Arquivo não disponível');
+  };
+
   return (
     <div>
       {/* Drop area */}
@@ -42,7 +66,16 @@ export default function AttachmentTab({
         {attachments.map((a, i) => (
           <div key={i} className="attach-chip" style={{ maxWidth: 220 }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>{fileIcon(a.name)}</span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }} title={a.name}>{a.name}</span>
+            <span 
+              onClick={() => handlePreview(a)}
+              style={{ 
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-text)'
+              }} 
+              title="Clique para abrir"
+            >
+              {a.name}
+            </span>
             <button
               onClick={() => setAttachments(att => att.filter((_, j) => j !== i))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}
