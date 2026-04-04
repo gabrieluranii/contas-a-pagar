@@ -9,6 +9,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.3.8] - 2026-04-04
+
+### Added
+- Redirecionamento automático para a página inicial (`/`) após login bem-sucedido no `AuthGate.jsx`.
+
+### Fixed
+- Melhoria no contraste e acessibilidade do `AlertBanner.jsx`, agora utilizando cores de alerta (`Amber 700`) mais legíveis com texto claro.
+
 ## [1.3.7] - 2026-04-04
 
 ### Changed
@@ -110,7 +118,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.7...HEAD
+[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.8...HEAD
+[1.3.8]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.5...v1.3.6
 [1.0.0]: https://github.com/gabrieluranii/contas-a-pagar/compare/v0.1.0...v1.0.0

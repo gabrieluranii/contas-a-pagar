@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { sb, isSupabaseConfigured } from '@/lib/supabase';
 
 const THEME = {
@@ -12,6 +13,7 @@ const THEME = {
 };
 
 export default function AuthGate({ children }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [email, setEmail] = useState('');
@@ -50,6 +52,9 @@ export default function AuthGate({ children }) {
     } else {
       const { error: signInErr } = await sb.auth.signInWithPassword({ email, password });
       error = signInErr;
+      if (!error) {
+        router.push('/');
+      }
     }
 
     if (error) {
