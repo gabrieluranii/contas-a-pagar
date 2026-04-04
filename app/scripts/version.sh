@@ -91,8 +91,8 @@ SUCCESS_MSG="v${CURRENT_VERSION} → v${NEW_VERSION}"
 
 info "Nova versão: ${BOLD}v${NEW_VERSION}${RESET}"
 
-# ─── Atualizar lib/version.ts ────────────────────────────────
-VERSION_FILE="lib/version.ts"
+# ─── Atualizar src/lib/version.ts ────────────────────────────────
+VERSION_FILE="src/lib/version.ts"
 BUILD_DATE=$(date +"%Y-%m-%d")
 
 if [[ ! -f "$VERSION_FILE" ]]; then
@@ -101,14 +101,22 @@ fi
 
 info "Atualizando $VERSION_FILE..."
 
-# Substitui a linha APP_VERSION
+# Substitui a linha APP_VERSION (Comentado: agora dinâmico do package.json)
+# if [[ "$(uname -s)" == "Darwin" ]]; then
+#   # macOS (sed -i precisa de extensão)
+#   sed -i '' "s/export const APP_VERSION = \".*\"/export const APP_VERSION = \"$NEW_VERSION\"/" "$VERSION_FILE"
+#   sed -i '' "s/export const BUILD_DATE = new Date(\".*\")/export const BUILD_DATE = new Date(\"$BUILD_DATE\")/" "$VERSION_FILE"
+# else
+#   # Linux / WSL / Git Bash
+#   sed -i "s/export const APP_VERSION = \".*\"/export const APP_VERSION = \"$NEW_VERSION\"/" "$VERSION_FILE"
+#   sed -i "s/export const BUILD_DATE = new Date(\".*\")/export const BUILD_DATE = new Date(\"$BUILD_DATE\")/" "$VERSION_FILE"
+# fi
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
   # macOS (sed -i precisa de extensão)
-  sed -i '' "s/export const APP_VERSION = \".*\"/export const APP_VERSION = \"$NEW_VERSION\"/" "$VERSION_FILE"
   sed -i '' "s/export const BUILD_DATE = new Date(\".*\")/export const BUILD_DATE = new Date(\"$BUILD_DATE\")/" "$VERSION_FILE"
 else
   # Linux / WSL / Git Bash
-  sed -i "s/export const APP_VERSION = \".*\"/export const APP_VERSION = \"$NEW_VERSION\"/" "$VERSION_FILE"
   sed -i "s/export const BUILD_DATE = new Date(\".*\")/export const BUILD_DATE = new Date(\"$BUILD_DATE\")/" "$VERSION_FILE"
 fi
 
