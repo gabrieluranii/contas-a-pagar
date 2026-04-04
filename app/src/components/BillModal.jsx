@@ -7,6 +7,7 @@ import { validateBill } from '@/lib/validation';
 
 import ExtrasSection from './bill-modal/ExtrasSection';
 import AttachmentTab from './bill-modal/AttachmentTab';
+import ConfirmModal from './ConfirmModal';
 
 function FormRow({ children, full = false }) {
   return (
@@ -89,6 +90,10 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
 
   // Saldo check
   const [saldoMsg, setSaldoMsg] = useState(null);
+
+  // Duplicata check
+  const [showDupConfirm, setShowDupConfirm] = useState(false);
+  const [pendingBill, setPendingBill] = useState(null);
 
   const fileRef = useRef(null);
 
@@ -211,7 +216,31 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
     }
 
     if (editId) dispatch({ type: 'UPDATE_BILL', payload: billObj });
-    else dispatch({ type: 'ADD_BILL', payload: billObj });
+    else {
+      // Check for duplicate only on new records
+      const isDuplicate = state.bills.some(b => 
+        b.supplier === billObj.supplier &&
+        Number(b.value) === Number(billObj.value) &&
+        b.nfnum === billObj.nfnum &&
+        b.nfserie === billObj.nfserie &&
+        b.base === billObj.base
+      );
+
+      if (isDuplicate) {
+        setPendingBill(billObj);
+        setShowDupConfirm(true);
+        return;
+      }
+      dispatch({ type: 'ADD_BILL', payload: billObj });
+    }
+    showMsg('Lançamento salvo!', 'var(--accent)');
+  }
+
+  function confirmSaveDuplicate() {
+    if (!pendingBill) return;
+    dispatch({ type: 'ADD_BILL', payload: pendingBill });
+    setPendingBill(null);
+    setShowDupConfirm(false);
     showMsg('Lançamento salvo!', 'var(--accent)');
   }
 
@@ -488,6 +517,13 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
           </button>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={showDupConfirm}
+        message="Já existe um lançamento com os mesmos dados (NF, série, fornecedor, valor e base). Deseja salvar mesmo assim?"
+        onConfirm={confirmSaveDuplicate}
+        onCancel={() => setShowDupConfirm(false)}
+      />
     </Modal>
   );
 }
