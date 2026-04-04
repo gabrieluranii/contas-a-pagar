@@ -6,6 +6,7 @@ import AlertBanner from '@/components/AlertBanner';
 import BillRow from '@/components/BillRow';
 import BillModal from '@/components/BillModal';
 import PagarModal from '@/components/PagarModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, isOverdue, urgencyStatus, LAUNCH_DAYS } from '@/lib/utils';
 
 function EmptyState({ icon, text }) {
@@ -54,6 +55,8 @@ export default function ContasPage() {
   const [pagarModalOpen, setPagarModalOpen] = useState(false);
   const [pagarBillId, setPagarBillId] = useState(null);
   const [dateStr, setDateStr] = useState('');
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
+
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
   }, []);
@@ -89,8 +92,11 @@ export default function ContasPage() {
   }
   function handleEdit(id) { setEditId(id); setBillModalOpen(true); }
   function handleDelete(id) {
-    if (!confirm('Excluir este lançamento?')) return;
-    dispatch({ type: 'DELETE_BILL', payload: id });
+    setConfirmCfg({
+      isOpen: true,
+      message: 'Excluir este lançamento?',
+      onConfirm: () => dispatch({ type: 'DELETE_BILL', payload: id })
+    });
   }
   function handleView(id) { handleEdit(id); }
 
@@ -168,6 +174,13 @@ export default function ContasPage() {
 
       <BillModal open={billModalOpen} onClose={() => { setBillModalOpen(false); setEditId(null); }} editId={editId}/>
       <PagarModal open={pagarModalOpen} onClose={() => { setPagarModalOpen(false); setPagarBillId(null); }} billId={pagarBillId}/>
+      
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

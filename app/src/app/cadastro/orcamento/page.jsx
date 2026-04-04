@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, MONTH_NAMES, thisMonthISO } from '@/lib/utils';
 
 export default function OrcamentoPage() {
@@ -10,6 +11,7 @@ export default function OrcamentoPage() {
   const [month, setMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ base: '', cat: '', value: '' });
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const selMonth = `${year}-${month}`;
   const rows = state.orcamentos.filter(o => o.month === selMonth);
@@ -26,8 +28,11 @@ export default function OrcamentoPage() {
   }
 
   function deleteOrc(base, cat, month) {
-    if (!confirm('Remover este orçamento?')) return;
-    dispatch({ type: 'DELETE_ORCAMENTO', base, cat, month });
+    setConfirmCfg({
+      isOpen: true,
+      message: 'Remover este orçamento?',
+      onConfirm: () => dispatch({ type: 'DELETE_ORCAMENTO', base, cat, month })
+    });
   }
 
   return (
@@ -116,6 +121,13 @@ export default function OrcamentoPage() {
           <button onClick={saveOrc} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>Salvar orçamento</button>
         </div>
       </Modal>
+
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

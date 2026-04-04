@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { fmtDate, todayISO, thisMonthISO, MONTH_NAMES } from '@/lib/utils';
 
 function CcModal({ open, onClose, editIdx }) {
@@ -71,6 +72,7 @@ export default function CcPage() {
   const [editIdx, setEditIdx] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const { bases } = state;
 
@@ -87,14 +89,23 @@ export default function CcPage() {
   }
   function deleteSelected() {
     if (!selected.size) return;
-    if (!confirm(`Remover ${selected.size} centro(s) de custo?`)) return;
-    dispatch({ type: 'DELETE_BASES', payload: selected });
-    setBulkMode(false); setSelected(new Set());
+    setConfirmCfg({
+      isOpen: true,
+      message: `Remover ${selected.size} centro(s) de custo?`,
+      onConfirm: () => {
+        dispatch({ type: 'DELETE_BASES', payload: selected });
+        setBulkMode(false);
+        setSelected(new Set());
+      }
+    });
   }
 
   function deleteBase(idx) {
-    if (!confirm(`Remover "${bases[idx].nome}"?`)) return;
-    dispatch({ type: 'DELETE_BASE', idx });
+    setConfirmCfg({
+      isOpen: true,
+      message: `Remover "${bases[idx].nome}"?`,
+      onConfirm: () => dispatch({ type: 'DELETE_BASE', idx })
+    });
   }
 
   function toggleDesmob(idx) {
@@ -199,6 +210,13 @@ export default function CcPage() {
       </div>
 
       <CcModal open={modalOpen} onClose={() => { setModalOpen(false); setEditIdx(null); }} editIdx={editIdx}/>
+      
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

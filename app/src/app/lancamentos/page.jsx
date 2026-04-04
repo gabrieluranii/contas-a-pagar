@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, fmtDate, MONTH_NAMES, normalizeKey, parseExcelDate, parseMoneyValue, todayISO } from '@/lib/utils';
 import { validateLancamento } from '@/lib/validation';
 
@@ -202,6 +203,7 @@ export default function LancamentosPage() {
   const [selected, setSelected] = useState(new Set());
   const [importMsg, setImportMsg] = useState('');
   const importRef = useRef(null);
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const { lancamentos, gestores, bases } = state;
 
@@ -226,9 +228,15 @@ export default function LancamentosPage() {
 
   function deleteSelected() {
     if (!selected.size) return;
-    if (!confirm(`Excluir ${selected.size} lançamento(s)?`)) return;
-    dispatch({ type: 'DELETE_LANCS', payload: selected });
-    setBulkMode(false); setSelected(new Set());
+    setConfirmCfg({
+      isOpen: true,
+      message: `Excluir ${selected.size} lançamento(s)?`,
+      onConfirm: () => {
+        dispatch({ type: 'DELETE_LANCS', payload: selected });
+        setBulkMode(false);
+        setSelected(new Set());
+      }
+    });
   }
 
   async function importExcel(e) {
@@ -368,7 +376,11 @@ export default function LancamentosPage() {
                   selected={selected}
                   toggleSelect={toggleSelect}
                   onEdit={() => { setEditId(l.id); setModalOpen(true); }}
-                  onDelete={() => { if (!confirm('Excluir?')) return; dispatch({ type: 'DELETE_LANC', payload: l.id }); }}
+                  onDelete={() => setConfirmCfg({ 
+                    isOpen: true, 
+                    message: 'Excluir este lançamento?', 
+                    onConfirm: () => dispatch({ type: 'DELETE_LANC', payload: l.id }) 
+                  })}
                 />
               ))}
             </tbody>
@@ -377,6 +389,13 @@ export default function LancamentosPage() {
       </div>
 
       <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId}/>
+      
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

@@ -1,10 +1,12 @@
-﻿'use client';
+'use client';
 import { useApp } from '@/context/AppContext';
 import { useState } from 'react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function ProdutoPage() {
   const { state, dispatch } = useApp();
   const [input, setInput] = useState('');
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
@@ -17,7 +19,11 @@ export default function ProdutoPage() {
           {state.cats.length ? state.cats.map((c, i) => (
             <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px', fontSize: 13 }}>
               {c}
-              <button onClick={() => { if (!confirm(`Remover "${c}"?`)) return; dispatch({ type: 'REMOVE_CAT', idx: i }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
+              <button onClick={() => setConfirmCfg({
+                isOpen: true,
+                message: `Remover "${c}"?`,
+                onConfirm: () => dispatch({ type: 'REMOVE_CAT', idx: i })
+              })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
             </div>
           )) : <span style={{ fontSize: 13, color: 'var(--text3)' }}>Nenhum produto cadastrado</span>}
         </div>
@@ -26,6 +32,13 @@ export default function ProdutoPage() {
           <button onClick={() => { if (input.trim() && !state.cats.includes(input.trim())) { dispatch({ type: 'ADD_CAT', payload: input.trim() }); setInput(''); } }} style={{ padding: '9px 16px', fontSize: 13, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>Adicionar</button>
         </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

@@ -1,8 +1,10 @@
-﻿'use client';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function BackupPage() {
   const { state, dispatch } = useApp();
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   function exportData() {
     const data = {
@@ -26,9 +28,14 @@ export default function BackupPage() {
       try {
         const data = JSON.parse(ev.target.result);
         if (!data.bills || !Array.isArray(data.bills)) throw new Error();
-        if (!confirm(`Importar ${data.bills.length} lançamento(s)? Os dados atuais serão substituídos.`)) return;
-        dispatch({ type: 'IMPORT_ALL', payload: data });
-        alert(`${data.bills.length} lançamento(s) importado(s) com sucesso!`);
+        setConfirmCfg({
+          isOpen: true,
+          message: `Importar ${data.bills.length} lançamento(s)? Os dados atuais serão substituídos.`,
+          onConfirm: () => {
+             dispatch({ type: 'IMPORT_ALL', payload: data });
+             alert(`${data.bills.length} lançamento(s) importado(s) com sucesso!`);
+          }
+        });
       } catch {
         alert('Arquivo inválido. Use um backup exportado por este app.');
       }
@@ -38,8 +45,11 @@ export default function BackupPage() {
   }
 
   function clearAll() {
-    if (!confirm('Tem certeza? Todos os lançamentos serão apagados permanentemente.')) return;
-    dispatch({ type: 'CLEAR_BILLS' });
+    setConfirmCfg({
+      isOpen: true,
+      message: 'Tem certeza? Todos os lançamentos serão apagados permanentemente.',
+      onConfirm: () => dispatch({ type: 'CLEAR_BILLS' })
+    });
   }
 
   const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', maxWidth: 520, marginBottom: '1.5rem' };
@@ -83,6 +93,13 @@ export default function BackupPage() {
         </p>
         <button onClick={clearAll} style={btnDanger}>Apagar todos os lançamentos</button>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

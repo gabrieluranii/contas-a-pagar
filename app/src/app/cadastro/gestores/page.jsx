@@ -1,10 +1,12 @@
-﻿'use client';
+'use client';
 import { useApp } from '@/context/AppContext';
 import { useState } from 'react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function GestoresPage() {
   const { state, dispatch } = useApp();
   const [input, setInput] = useState('');
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
@@ -17,7 +19,14 @@ export default function GestoresPage() {
           {state.gestores.length ? state.gestores.map((g, i) => (
             <div key={g} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px', fontSize: 13 }}>
               {g}
-              <button onClick={() => { if (!confirm(`Remover "${g}"?`)) return; dispatch({ type: 'REMOVE_GESTOR', idx: i }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
+              <button onClick={() => setConfirmCfg({
+                isOpen: true,
+                message: `Remover "${g}"?`,
+                onConfirm: () => {
+                  dispatch({ type: 'REMOVE_GESTOR', idx: i });
+                  setConfirmCfg(prev => ({ ...prev, isOpen: false }));
+                }
+              })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
             </div>
           )) : <span style={{ fontSize: 13, color: 'var(--text3)' }}>Nenhum gestor cadastrado</span>}
         </div>
@@ -26,6 +35,13 @@ export default function GestoresPage() {
           <button onClick={() => { if (input.trim() && !state.gestores.includes(input.trim())) { dispatch({ type: 'ADD_GESTOR', payload: input.trim() }); setInput(''); } }} style={{ padding: '9px 16px', fontSize: 13, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>Adicionar</button>
         </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

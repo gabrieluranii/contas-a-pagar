@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import BillRow from '@/components/BillRow';
 import BillModal from '@/components/BillModal';
 import PagarModal from '@/components/PagarModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { isOverdue, MONTH_NAMES } from '@/lib/utils';
 
 const TABS = [
@@ -25,6 +26,7 @@ export default function ContasListaPage() {
   const [editId, setEditId] = useState(null);
   const [pagarModalOpen, setPagarModalOpen] = useState(false);
   const [pagarBillId, setPagarBillId] = useState(null);
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const { bills, bases, cats } = state;
 
@@ -50,8 +52,11 @@ export default function ContasListaPage() {
   }
   function handleEdit(id) { setEditId(id); setBillModalOpen(true); }
   function handleDelete(id) {
-    if (!confirm('Excluir este lançamento?')) return;
-    dispatch({ type: 'DELETE_BILL', payload: id });
+    setConfirmCfg({
+      isOpen: true,
+      message: 'Excluir este lançamento?',
+      onConfirm: () => dispatch({ type: 'DELETE_BILL', payload: id })
+    });
   }
 
   const selStyle = { padding: '5px 10px', fontSize: 13, borderRadius: 20, border: '1px solid var(--border2)', background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit', cursor: 'pointer', width: 'auto' };
@@ -122,6 +127,13 @@ export default function ContasListaPage() {
 
       <BillModal open={billModalOpen} onClose={() => { setBillModalOpen(false); setEditId(null); }} editId={editId}/>
       <PagarModal open={pagarModalOpen} onClose={() => { setPagarModalOpen(false); setPagarBillId(null); }} billId={pagarBillId}/>
+      
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, fmtDate, isOverdue, daysUntil, LAUNCH_DAYS } from '@/lib/utils';
 
 function TvoCard({ b, onAction, onDelete, mode }) {
@@ -55,6 +56,7 @@ export default function TvoPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const { tvoBills, bases, cats } = state;
   const list = tvoBills.filter(b => tab === 'tvo' ? b.tvoStage === 'pending' : b.tvoStage === 'aguardando');
@@ -73,8 +75,11 @@ export default function TvoPage() {
   }
 
   function handleDelete(id) {
-    if (!confirm('Excluir este lançamento?')) return;
-    dispatch({ type: 'DELETE_TVO_BILL', payload: id });
+    setConfirmCfg({
+      isOpen: true,
+      message: 'Excluir este lançamento?',
+      onConfirm: () => dispatch({ type: 'DELETE_TVO_BILL', payload: id })
+    });
   }
 
   function saveEdit() {
@@ -152,6 +157,13 @@ export default function TvoPage() {
           <button onClick={confirmLancamento} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>Confirmar lançamento</button>
         </div>
       </Modal>
+
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

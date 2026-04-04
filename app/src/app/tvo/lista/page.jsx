@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, fmtDate, normalizeKey, parseExcelDate, parseMoneyValue, MONTH_NAMES, todayISO } from '@/lib/utils';
 
 function TvoRegModal({ open, onClose, editId }) {
@@ -77,6 +78,7 @@ export default function TvoListaPage() {
   const [selected, setSelected] = useState(new Set());
   const [importMsg, setImportMsg] = useState('');
   const importRef = useRef(null);
+  const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const { tvoRegistros, gestores, bases } = state;
 
@@ -86,9 +88,15 @@ export default function TvoListaPage() {
 
   function deleteSelected() {
     if (!selected.size) return;
-    if (!confirm(`Excluir ${selected.size} registro(s)?`)) return;
-    dispatch({ type: 'DELETE_TVO_REGS', payload: selected });
-    setBulkMode(false); setSelected(new Set());
+    setConfirmCfg({
+      isOpen: true,
+      message: `Excluir ${selected.size} registro(s)?`,
+      onConfirm: () => {
+        dispatch({ type: 'DELETE_TVO_REGS', payload: selected });
+        setBulkMode(false);
+        setSelected(new Set());
+      }
+    });
   }
 
   async function importExcel(e) {
@@ -208,7 +216,11 @@ export default function TvoListaPage() {
                       <button onClick={() => { setEditId(r.id); setModalOpen(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--nav-orange)', padding: 4 }}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
-                      <button onClick={() => { if (!confirm('Excluir?')) return; dispatch({ type: 'DELETE_TVO_REG', payload: r.id }); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 12, padding: 4 }}>✕</button>
+                      <button onClick={() => setConfirmCfg({ 
+                        isOpen: true, 
+                        message: 'Excluir este registro?', 
+                        onConfirm: () => dispatch({ type: 'DELETE_TVO_REG', payload: r.id }) 
+                      })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 12, padding: 4 }}>✕</button>
                     </div>
                   </td>
                 </tr>
@@ -219,6 +231,13 @@ export default function TvoListaPage() {
       </div>
 
       <TvoRegModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId}/>
+      
+      <ConfirmModal 
+        isOpen={confirmCfg.isOpen}
+        message={confirmCfg.message}
+        onConfirm={confirmCfg.onConfirm}
+        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
