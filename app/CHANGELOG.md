@@ -9,6 +9,11 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.3.7] - 2026-04-04
+
+### Changed
+- Imagem de fundo personalizada aplicada à tela de login no `AuthGate.jsx`.
+
 ## [1.3.6] - 2026-04-03
 
 ### Fixed
@@ -105,7 +110,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.6...HEAD
+[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.7...HEAD
+[1.3.7]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.5...v1.3.6
 [1.0.0]: https://github.com/gabrieluranii/contas-a-pagar/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/gabrieluranii/contas-a-pagar/compare/v0.0.1...v0.1.0
