@@ -5,7 +5,7 @@ import pkg from '../../package.json';
 export const APP_VERSION: string = pkg.version;
 export const APP_NAME = "Contas a Pagar";
 export const THEME = "Obsidian Ledger";
-export const BUILD_DATE = new Date("2026-03-31");
+export const BUILD_DATE = new Date("2026-04-03");
 export const ENVIRONMENT = (process.env.NODE_ENV ?? "production") as "development" | "production" | "test";
 
 export function getVersionInfo() {

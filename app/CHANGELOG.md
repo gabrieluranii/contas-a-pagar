@@ -9,6 +9,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-04-03
+
+### Fixed
+- Conflito de arquivo `version.ts` duplicado resolvido (removido `app/lib/version.ts`).
+- Script de versionamento (`version.sh`) atualizado para o novo caminho do arquivo de versão.
+
+### Added
+- Overlay de carregamento (Loading State) adicionado em `app/src/components/Providers.jsx`.
+
 ### Planejado
 - Integração com Pix para pagamento direto
 - Relatórios mensais exportáveis em PDF
@@ -96,7 +105,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/gabrieluranii/contas-a-pagar/compare/v1.3.5...v1.3.6
 [1.0.0]: https://github.com/gabrieluranii/contas-a-pagar/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/gabrieluranii/contas-a-pagar/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/gabrieluranii/contas-a-pagar/releases/tag/v0.0.1
