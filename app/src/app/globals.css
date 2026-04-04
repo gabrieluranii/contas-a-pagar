@@ -266,7 +266,7 @@ input::placeholder { color: var(--text3); }
 /* ── TAILWIND SHIM FOR CONFIRMMODAL ── */
 .fixed { position: fixed; }
 .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
-.bg-black\/60 { background-color: rgba(0, 0, 0, 0.6); }
+.bg-black\/60 { background-color: rgba(0, 0, 0, 0.75); }
 .backdrop-blur-sm { backdrop-filter: blur(4px); }
 .z-50 { z-index: 50; }
 .flex { display: flex; }
@@ -284,21 +284,21 @@ input::placeholder { color: var(--text3); }
 .rounded-xl { border-radius: 0.75rem; }
 .rounded-lg { border-radius: 0.5rem; }
 .border { border-style: solid; border-width: 1px; }
-.border-zinc-700 { border-color: #3f3f46; }
-.bg-\[\#18181b\] { background-color: #18181b; }
-.bg-zinc-700 { background-color: #3f3f46; }
-.bg-red-600 { background-color: #dc2626; }
-.hover\:bg-zinc-600:hover { background-color: #52525b; }
-.hover\:bg-red-700:hover { background-color: #b91c1c; }
+.border-zinc-700 { border-color: var(--nav-bg2); }
+.bg-\[\#18181b\] { background-color: var(--nav-bg); }
+.bg-zinc-700 { background-color: var(--nav-bg2); }
+.bg-red-600 { background-color: var(--danger); }
+.hover\:bg-zinc-600:hover { background-color: #333; }
+.hover\:bg-red-700:hover { opacity: 0.9; }
 .text-white { color: #fff; }
-.text-zinc-400 { color: #a1a1aa; }
+.text-zinc-400 { color: var(--text3); }
 .text-sm { font-size: 0.875rem; }
 .text-lg { font-size: 1.125rem; }
 .font-semibold { font-weight: 600; }
 .font-medium { font-weight: 500; }
 .leading-relaxed { line-height: 1.625; }
 .flex-1 { flex: 1 1 0%; }
-.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); }
 .transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
 .animate-in { animation: fadeIn 0.2s ease-out; }
 
