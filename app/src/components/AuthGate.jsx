@@ -64,8 +64,17 @@ export default function AuthGate({ children }) {
   if (!session) {
     return (
       <div style={{
-        position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
-        background: THEME.bg, fontFamily: 'Inter, sans-serif'
+        position: 'fixed', 
+        inset: 0, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        zIndex: 9999,
+        backgroundImage: "url('https://replicate.delivery/xpbkg/O5K8n6N6sNfA5O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0/output.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        fontFamily: 'Inter, sans-serif'
       }}>
         <div style={{
           background: '#f0eeeb', border: `1px solid ${THEME.border}`,
