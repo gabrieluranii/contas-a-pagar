@@ -1,35 +1,37 @@
 import { downloadAttachment } from '@/lib/gmail';
 import { NextResponse } from 'next/server';
-import * as pdfParseModule from 'pdf-parse';
-const pdfParse = pdfParseModule.default ?? pdfParseModule;
+
+// Extrai texto legível de um buffer PDF sem depender de pdfjs
+function extractTextFromPDF(buffer) {
+  const str = buffer.toString('latin1');
+  const matches = str.match(/\(([^)]{2,80})\)/g) || [];
+  const text = matches
+    .map(m => m.slice(1, -1))
+    .filter(s => /[a-zA-Z0-9]/.test(s))
+    .join(' ')
+    .slice(0, 3000);
+  return text;
+}
 
 export async function POST(req) {
   try {
     const { messageId, attachmentId, filename } = await req.json();
 
-    // Baixa o PDF como base64url
     const base64url = await downloadAttachment(messageId, attachmentId);
     const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
     const buffer = Buffer.from(base64, 'base64');
 
-    // Extrai texto do PDF
-    let pdfText = '';
-    try {
-      const parsed = await pdfParse(buffer);
-      pdfText = parsed.text?.slice(0, 3000) || '';
-    } catch {
-      pdfText = '';
-    }
+    const pdfText = extractTextFromPDF(buffer);
+    console.log('[pdf text sample]', pdfText.slice(0, 200));
 
     if (!pdfText.trim()) {
       return NextResponse.json({
         extracted: { supplier: null, nf: null, value: null, due: null, emission: null },
         filename,
-        warning: 'PDF sem texto extraível (pode ser imagem escaneada)',
+        warning: 'PDF sem texto extraível',
       });
     }
 
-    // Envia texto para Groq
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -60,19 +62,17 @@ ${pdfText}`,
     });
 
     const groqData = await groqRes.json();
-    console.log('[groq raw response]', JSON.stringify(groqData).slice(0, 500));
-    const raw = groqData.choices?.[0]?.message?.content || '{}';
+    console.log('[groq response]', JSON.stringify(groqData).slice(0, 300));
 
+    const raw = groqData.choices?.[0]?.message?.content || '{}';
     let extracted = {};
     try {
       extracted = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    } catch {
-      extracted = {};
-    }
+    } catch { extracted = {}; }
 
     return NextResponse.json({ extracted, filename });
   } catch (err) {
-    console.error('[email/extract]', err);
+    console.error('[email/extract error]', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
