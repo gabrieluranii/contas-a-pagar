@@ -1,16 +1,34 @@
 import { downloadAttachment } from '@/lib/gmail';
 import { NextResponse } from 'next/server';
+import pdfParse from 'pdf-parse';
 
 export async function POST(req) {
   try {
     const { messageId, attachmentId, filename } = await req.json();
 
-    // Baixa o PDF como base64
+    // Baixa o PDF como base64url
     const base64url = await downloadAttachment(messageId, attachmentId);
-    // Converte base64url → base64 padrão
     const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const buffer = Buffer.from(base64, 'base64');
 
-    // Envia para Groq Vision (modelo com suporte a documentos)
+    // Extrai texto do PDF
+    let pdfText = '';
+    try {
+      const parsed = await pdfParse(buffer);
+      pdfText = parsed.text?.slice(0, 3000) || '';
+    } catch {
+      pdfText = '';
+    }
+
+    if (!pdfText.trim()) {
+      return NextResponse.json({
+        extracted: { supplier: null, nf: null, value: null, due: null, emission: null },
+        filename,
+        warning: 'PDF sem texto extraível (pode ser imagem escaneada)',
+      });
+    }
+
+    // Envia texto para Groq
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -18,33 +36,25 @@ export async function POST(req) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
+            role: 'system',
+            content: 'Você é um extrator de dados de notas fiscais e boletos brasileiros. Retorne SOMENTE JSON válido, sem explicações.',
+          },
+          {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analise este PDF de nota fiscal ou boleto e retorne SOMENTE um JSON válido com os campos:
-{
-  "supplier": "nome do fornecedor/emitente",
-  "nf": "número da nota fiscal ou boleto",
-  "value": valor numérico total,
-  "due": "data de vencimento no formato YYYY-MM-DD",
-  "emission": "data de emissão no formato YYYY-MM-DD"
-}
-Se não encontrar um campo, use null. Retorne apenas o JSON, sem explicações.`,
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:application/pdf;base64,${base64}`,
-                },
-              },
-            ],
+            content: `Extraia os dados deste documento e retorne SOMENTE este JSON:
+{"supplier":"nome do emitente/fornecedor","nf":"número da NF ou boleto","value":0.00,"due":"YYYY-MM-DD","emission":"YYYY-MM-DD"}
+
+Se não encontrar um campo, use null. Apenas o JSON, sem markdown.
+
+DOCUMENTO:
+${pdfText}`,
           },
         ],
-        max_tokens: 512,
+        max_tokens: 256,
+        temperature: 0,
       }),
     });
 
