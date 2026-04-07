@@ -18,7 +18,7 @@ export async function fetchEmailsWithPDF() {
 
   const list = await gmail.users.messages.list({
     userId: process.env.GMAIL_USER,
-    q: 'from:gabriel.assis@medmais.com has:attachment filename:pdf',
+    q: 'from:gabriel.assis@medmais.com OR to:gabriel.assis@medmais.com has:attachment filename:pdf',
     maxResults: 20,
   });
 
