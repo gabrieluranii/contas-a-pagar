@@ -1,6 +1,7 @@
 import { downloadAttachment } from '@/lib/gmail';
 import { NextResponse } from 'next/server';
-import pdfParse from 'pdf-parse';
+import * as pdfParseModule from 'pdf-parse';
+const pdfParse = pdfParseModule.default ?? pdfParseModule;
 
 export async function POST(req) {
   try {
