@@ -60,6 +60,7 @@ ${pdfText}`,
     });
 
     const groqData = await groqRes.json();
+    console.log('[groq raw response]', JSON.stringify(groqData).slice(0, 500));
     const raw = groqData.choices?.[0]?.message?.content || '{}';
 
     let extracted = {};
