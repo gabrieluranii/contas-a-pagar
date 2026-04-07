@@ -38,6 +38,7 @@ const ZapIcon  = () => <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>;
 const ShieldIcon=() => <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>;
 const DbIcon   = () => <Icon><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></Icon>;
 const DashIcon = () => <Icon><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></Icon>;
+const EmailIcon = () => <Icon><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><path d="m22 6-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 6"/></Icon>;
 const GearIcon = () => <Icon><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
 
 const ChevronDown = ({ open }) => (
@@ -327,6 +328,7 @@ export default function Navbar() {
           <NavItem href="/dashboards"   icon={<DashIcon/>}  label="Dashboards"         expanded={expanded}/>
           <Div/>
           <NavItem href="/contas"       icon={<CardIcon/>}  label="Pagamentos Pendentes" expanded={expanded} badge={urgentCount}/>
+          <NavItem href="/email"        icon={<EmailIcon/>} label="Email"              expanded={expanded}/>
           <NavItem href="/lancamentos"  icon={<ZapIcon/>}   label="Lançamentos"        expanded={expanded}/>
           <NavItem href="/tvo"          icon={<ShieldIcon/>}label="TVO e Contingência" expanded={expanded} badge={tvoPendingCount}/>
           <Div/>
