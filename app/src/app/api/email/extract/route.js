@@ -1,70 +1,71 @@
 import { downloadAttachment } from '@/lib/gmail';
 import { NextResponse } from 'next/server';
 
-// Extrai texto legível de um buffer PDF sem depender de pdfjs
-function extractTextFromPDF(buffer) {
-  const str = buffer.toString('latin1');
-  const matches = str.match(/\(([^)]{2,80})\)/g) || [];
-  const text = matches
-    .map(m => m.slice(1, -1))
-    .filter(s => /[a-zA-Z0-9]/.test(s))
-    .join(' ')
-    .slice(0, 3000);
-  return text;
-}
+const EXTRACTION_PROMPT = `Extraia os seguintes campos do documento anexo (Boleto ou Nota Fiscal). Retorne EXATAMENTE e APENAS um JSON válido. Não inclua Markdown, backticks ou texto extra.
+Campos requeridos:
+- fornecedor (string): Nome do emissor ou recebedor.
+- valor (number): Valor total a pagar numérico (ex: 1540.50).
+- emissao (string): Data de emissão no formato YYYY-MM-DD.
+- nfnum (string): Número da nota fiscal (se houver).
+- nfserie (string): Série da nota fiscal (se houver).
+- vencimento (string): Data de vencimento no formato YYYY-MM-DD.
+- observacao (string): Linha digitável ou resumo.
+- tipo (string): "boleto", "nf", "merged" ou "outro".
+Retorne APENAS o JSON vazio se não entender nada.`;
 
 export async function POST(req) {
   try {
     const { messageId, attachmentId, filename } = await req.json();
 
     const base64url = await downloadAttachment(messageId, attachmentId);
-    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-    const buffer = Buffer.from(base64, 'base64');
+    const base64Data = base64url.replace(/-/g, '+').replace(/_/g, '/');
 
-    const pdfText = extractTextFromPDF(buffer);
-    console.log('[pdf text sample]', pdfText.slice(0, 200));
-
-    if (!pdfText.trim()) {
-      return NextResponse.json({
-        extracted: { supplier: null, nf: null, value: null, due: null, emission: null },
-        filename,
-        warning: 'PDF sem texto extraível',
-      });
+    const key = process.env.GROQ_API_KEY;
+    if (!key) {
+      return NextResponse.json({ error: 'Chave do Groq não configurada.' }, { status: 500 });
     }
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
-            role: 'system',
-            content: 'Você é um extrator de dados de notas fiscais e boletos brasileiros. Retorne SOMENTE JSON válido, sem explicações.',
-          },
-          {
             role: 'user',
-            content: `Extraia os dados deste documento e retorne SOMENTE este JSON:
-{"supplier":"nome do emitente/fornecedor","nf":"número da NF ou boleto","value":0.00,"due":"YYYY-MM-DD","emission":"YYYY-MM-DD"}
-
-Se não encontrar um campo, use null. Apenas o JSON, sem markdown.
-
-DOCUMENTO:
-${pdfText}`,
+            content: [
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:application/pdf;base64,${base64Data}`,
+                },
+              },
+              {
+                type: 'text',
+                text: EXTRACTION_PROMPT,
+              },
+            ],
           },
         ],
-        max_tokens: 256,
         temperature: 0,
+        max_tokens: 1024,
       }),
     });
 
-    const groqData = await groqRes.json();
-    console.log('[groq response]', JSON.stringify(groqData).slice(0, 300));
+    if (!res.ok) {
+      const err = await res.json();
+      return NextResponse.json(
+        { error: err.error?.message || 'Falha na API do Groq' },
+        { status: res.status }
+      );
+    }
 
-    const raw = groqData.choices?.[0]?.message?.content || '{}';
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+
     let extracted = {};
     try {
       extracted = JSON.parse(raw.replace(/```json|```/g, '').trim());
