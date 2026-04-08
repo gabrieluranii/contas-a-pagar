@@ -4,19 +4,6 @@ import { useApp } from '@/context/AppContext';
 import { fmt, fmtDate } from '@/lib/utils';
 import { v4 as uuid } from 'uuid';
 
-const C = {
-  bg:      '#0d0d0d',
-  surface: '#141414',
-  card:    '#1a1a1a',
-  border:  '#222',
-  accent:  '#d97757',
-  text:    '#f0f0f0',
-  sec:     '#888',
-  danger:  '#ef4444',
-  ok:      '#4caf82',
-  warn:    '#f59e0b',
-};
-
 function Btn({ children, onClick, danger, outline, small, disabled, full }) {
   const [hov, setHov] = useState(false);
   return (
@@ -28,12 +15,22 @@ function Btn({ children, onClick, danger, outline, small, disabled, full }) {
       style={{
         width: full ? '100%' : 'auto',
         padding: small ? '5px 12px' : '10px 22px',
-        border: outline ? `1px solid ${danger ? C.danger : C.accent}` : 'none',
-        borderRadius: 8, cursor: disabled ? 'not-allowed' : 'pointer',
+        border: outline
+          ? `1px solid ${danger ? 'var(--danger)' : 'var(--nav-orange)'}`
+          : 'none',
+        borderRadius: 8,
+        cursor: disabled ? 'not-allowed' : 'pointer',
         fontFamily: 'Poppins, sans-serif',
-        fontSize: small ? 11 : 13, fontWeight: 600,
-        background: disabled ? '#2a2a2a' : outline ? 'transparent' : (danger ? C.danger : C.accent),
-        color: outline ? (danger ? C.danger : C.accent) : '#fff',
+        fontSize: small ? 11 : 13,
+        fontWeight: 600,
+        background: disabled
+          ? 'var(--surface)'
+          : outline
+            ? 'transparent'
+            : danger
+              ? 'var(--danger)'
+              : 'var(--nav-orange)',
+        color: outline ? (danger ? 'var(--danger)' : 'var(--nav-orange)') : '#fff',
         opacity: hov && !disabled ? 0.85 : 1,
         transition: 'all 0.15s',
       }}>
@@ -63,7 +60,7 @@ function ReviewModal({ item, onApprove, onReject, onClose }) {
       alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: C.card, border: `1px solid ${C.border}`,
+        background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 16, padding: 32, width: '100%', maxWidth: 460,
         boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
       }}>
@@ -71,11 +68,11 @@ function ReviewModal({ item, onApprove, onReject, onClose }) {
         <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Chip
             label={isBoleto ? 'BOLETO' : item.tipo === 'nf' ? 'NOTA FISCAL' : item.tipo === 'merged' ? 'NF + BOLETO' : 'DOCUMENTO'}
-            color={isBoleto ? C.warn : C.ok}
-            bg={isBoleto ? 'rgba(245,158,11,0.12)' : 'rgba(76,175,130,0.12)'}
+            color={isBoleto ? 'var(--warning)' : 'var(--accent)'}
+            bg={isBoleto ? 'var(--warning-light)' : 'var(--accent-light)'}
           />
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: C.sec,
+            background: 'none', border: 'none', color: 'var(--text3)',
             fontSize: 18, cursor: 'pointer', lineHeight: 1,
           }}>✕</button>
         </div>
@@ -84,13 +81,13 @@ function ReviewModal({ item, onApprove, onReject, onClose }) {
         <div style={{ marginBottom: 24 }}>
           <div style={{
             fontFamily: 'Poppins, sans-serif', fontSize: 20, fontWeight: 700,
-            color: C.text, marginBottom: 6, lineHeight: 1.2,
+            color: 'var(--text)', marginBottom: 6, lineHeight: 1.2,
           }}>
             {item.supplier || '—'}
           </div>
           <div style={{
             fontFamily: 'Poppins, sans-serif', fontSize: 28, fontWeight: 700,
-            color: C.accent, marginBottom: 16,
+            color: 'var(--nav-orange)', marginBottom: 16,
           }}>
             {item.value > 0 ? fmt(item.value) : '—'}
           </div>
@@ -98,38 +95,38 @@ function ReviewModal({ item, onApprove, onReject, onClose }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {isBoleto ? (
               <div style={{ gridColumn: '1 / -1' }}>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.sec, marginBottom: 4 }}>Vencimento</div>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 15, color: C.text }}>{item.due ? fmtDate(item.due) : '—'}</div>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Vencimento</div>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 15, color: 'var(--text)' }}>{item.due ? fmtDate(item.due) : '—'}</div>
               </div>
             ) : (
               <>
                 <div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.sec, marginBottom: 4 }}>Vencimento</div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: C.text }}>{item.due ? fmtDate(item.due) : '—'}</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Vencimento</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: 'var(--text)' }}>{item.due ? fmtDate(item.due) : '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.sec, marginBottom: 4 }}>Emissão</div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: C.text }}>{item.emission ? fmtDate(item.emission) : '—'}</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Emissão</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: 'var(--text)' }}>{item.emission ? fmtDate(item.emission) : '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.sec, marginBottom: 4 }}>Nº NF</div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: C.text }}>{item.nf || '—'}</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Nº NF</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: 'var(--text)' }}>{item.nf || '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.sec, marginBottom: 4 }}>Série</div>
-                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: C.text }}>{item.serie || '—'}</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Série</div>
+                  <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, color: 'var(--text)' }}>{item.serie || '—'}</div>
                 </div>
               </>
             )}
           </div>
 
           {item.obs && (
-            <div style={{ marginTop: 12, padding: '10px 12px', background: C.surface, borderRadius: 8, fontFamily: 'Poppins, sans-serif', fontSize: 12, color: C.sec }}>
+            <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg)', borderRadius: 8, fontFamily: 'Poppins, sans-serif', fontSize: 12, color: 'var(--text3)' }}>
               {item.obs}
             </div>
           )}
 
-          <div style={{ marginTop: 10, fontFamily: 'Poppins, sans-serif', fontSize: 11, color: C.sec }}>
+          <div style={{ marginTop: 10, fontFamily: 'Poppins, sans-serif', fontSize: 11, color: 'var(--text3)' }}>
             📧 {item.emailFrom} · {item.emailSubject}
           </div>
         </div>
@@ -137,13 +134,13 @@ function ReviewModal({ item, onApprove, onReject, onClose }) {
         {/* Botões tinder */}
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={onReject} style={{
-            flex: 1, padding: '14px', borderRadius: 10, border: `2px solid ${C.danger}`,
-            background: 'transparent', color: C.danger, fontFamily: 'Poppins, sans-serif',
+            flex: 1, padding: '14px', borderRadius: 10, border: '2px solid var(--danger)',
+            background: 'transparent', color: 'var(--danger)', fontFamily: 'Poppins, sans-serif',
             fontSize: 22, cursor: 'pointer', transition: 'all 0.15s',
           }}>✕</button>
           <button onClick={onApprove} style={{
-            flex: 1, padding: '14px', borderRadius: 10, border: `2px solid ${C.ok}`,
-            background: 'transparent', color: C.ok, fontFamily: 'Poppins, sans-serif',
+            flex: 1, padding: '14px', borderRadius: 10, border: '2px solid var(--accent)',
+            background: 'transparent', color: 'var(--accent)', fontFamily: 'Poppins, sans-serif',
             fontSize: 22, cursor: 'pointer', transition: 'all 0.15s',
           }}>✓</button>
         </div>
@@ -157,7 +154,7 @@ function QueueCard({ item, onView, onApprove, onReject }) {
   const isBoleto = item.tipo === 'boleto';
   return (
     <div style={{
-      background: C.card, border: `1px solid ${C.border}`,
+      background: 'var(--surface)', border: '1px solid var(--border)',
       borderRadius: 12, padding: '16px 20px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       gap: 16,
@@ -166,19 +163,19 @@ function QueueCard({ item, onView, onApprove, onReject }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <Chip
             label={isBoleto ? 'BOLETO' : 'NF'}
-            color={isBoleto ? C.warn : C.ok}
-            bg={isBoleto ? 'rgba(245,158,11,0.12)' : 'rgba(76,175,130,0.12)'}
+            color={isBoleto ? 'var(--warning)' : 'var(--accent)'}
+            bg={isBoleto ? 'var(--warning-light)' : 'var(--accent-light)'}
           />
-          <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {item.supplier || '—'}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 16, fontWeight: 700, color: C.accent }}>
+          <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 16, fontWeight: 700, color: 'var(--nav-orange)' }}>
             {item.value > 0 ? fmt(item.value) : '—'}
           </span>
           {item.due && (
-            <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 12, color: C.sec }}>
+            <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 12, color: 'var(--text3)' }}>
               Venc. {fmtDate(item.due)}
             </span>
           )}
@@ -186,21 +183,21 @@ function QueueCard({ item, onView, onApprove, onReject }) {
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <button onClick={onView} style={{
-          background: C.surface, border: `1px solid ${C.border}`,
+          background: 'var(--bg)', border: '1px solid var(--border)',
           borderRadius: 8, padding: '7px 12px', cursor: 'pointer',
-          fontFamily: 'Poppins, sans-serif', fontSize: 16, color: C.sec,
+          fontFamily: 'Poppins, sans-serif', fontSize: 16, color: 'var(--text3)',
           lineHeight: 1,
         }}>👁</button>
         <button onClick={onReject} style={{
-          background: 'rgba(239,68,68,0.08)', border: `1px solid ${C.danger}`,
+          background: 'var(--danger-light)', border: '1px solid var(--danger)',
           borderRadius: 8, padding: '7px 14px', cursor: 'pointer',
-          fontFamily: 'Poppins, sans-serif', fontSize: 16, color: C.danger,
+          fontFamily: 'Poppins, sans-serif', fontSize: 16, color: 'var(--danger)',
           lineHeight: 1,
         }}>✕</button>
         <button onClick={onApprove} style={{
-          background: 'rgba(76,175,130,0.08)', border: `1px solid ${C.ok}`,
+          background: 'var(--accent-light)', border: '1px solid var(--accent)',
           borderRadius: 8, padding: '7px 14px', cursor: 'pointer',
-          fontFamily: 'Poppins, sans-serif', fontSize: 16, color: C.ok,
+          fontFamily: 'Poppins, sans-serif', fontSize: 16, color: 'var(--accent)',
           lineHeight: 1,
         }}>✓</button>
       </div>
@@ -306,6 +303,11 @@ export default function EmailPage() {
 
         // Pega o item com maior valor
         const best = results.reduce((a, b) => b.value > a.value ? b : a, results[0]);
+        // Se o melhor item não tem vencimento, tenta pegar de outro item do mesmo email
+        if (!best.due) {
+          const withDue = results.find(r => r.due && r !== best);
+          if (withDue) best.due = withDue.due;
+        }
 
         newItems.push({
           _id:          uuid(),
@@ -369,18 +371,18 @@ export default function EmailPage() {
   const tabStyle = (t) => ({
     padding: '9px 20px', fontSize: 13, fontFamily: 'Poppins, sans-serif', fontWeight: 600,
     background: 'none', border: 'none', cursor: 'pointer',
-    borderBottom: tab === t ? `2px solid ${C.accent}` : '2px solid transparent',
-    color: tab === t ? C.accent : C.sec,
+    borderBottom: tab === t ? '2px solid var(--nav-orange)' : '2px solid transparent',
+    color: tab === t ? 'var(--nav-orange)' : 'var(--text3)',
     marginBottom: -2, transition: 'all 0.15s',
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, padding: '32px 40px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '32px 40px' }}>
 
       {toast && (
         <div style={{
           position: 'fixed', top: 20, right: 24, zIndex: 1001,
-          background: toast.type === 'ok' ? C.ok : toast.type === 'warn' ? C.warn : C.danger,
+          background: toast.type === 'ok' ? 'var(--accent)' : toast.type === 'warn' ? 'var(--warning)' : 'var(--danger)',
           color: '#fff', padding: '10px 20px', borderRadius: 8,
           fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 500,
           boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
@@ -390,10 +392,10 @@ export default function EmailPage() {
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontFamily: 'Poppins, sans-serif', fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>
+          <h1 style={{ fontFamily: 'Poppins, sans-serif', fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>
             Importação via E-mail
           </h1>
-          <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, color: C.sec, marginTop: 6 }}>
+          <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, color: 'var(--text3)', marginTop: 6 }}>
             E-mails com PDF detectados e extraídos automaticamente via Gmail.
           </p>
         </div>
@@ -403,12 +405,12 @@ export default function EmailPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
+      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 24 }}>
         <button style={tabStyle('queue')} onClick={() => setTab('queue')}>
-          Fila {queue.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, background: C.accent, color: '#fff', borderRadius: 10, padding: '1px 6px' }}>{queue.length}</span>}
+          Fila {queue.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, background: 'var(--nav-orange)', color: '#fff', borderRadius: 10, padding: '1px 6px' }}>{queue.length}</span>}
         </button>
         <button style={tabStyle('rejected')} onClick={() => setTab('rejected')}>
-          Rejeitados {rejected.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, background: '#444', color: C.sec, borderRadius: 10, padding: '1px 6px' }}>{rejected.length}</span>}
+          Rejeitados {rejected.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, background: 'var(--surface)', color: 'var(--text3)', borderRadius: 10, padding: '1px 6px' }}>{rejected.length}</span>}
         </button>
       </div>
 
@@ -416,7 +418,7 @@ export default function EmailPage() {
       {tab === 'queue' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {queue.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: C.sec, fontFamily: 'Poppins, sans-serif', fontSize: 14 }}>
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontFamily: 'Poppins, sans-serif', fontSize: 14 }}>
               Nenhum item na fila. Clique em "Atualizar" para buscar e-mails.
             </div>
           )}
@@ -436,22 +438,22 @@ export default function EmailPage() {
       {tab === 'rejected' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {rejected.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: C.sec, fontFamily: 'Poppins, sans-serif', fontSize: 14 }}>
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontFamily: 'Poppins, sans-serif', fontSize: 14 }}>
               Nenhum item rejeitado ainda.
             </div>
           )}
           {rejected.map(item => (
             <div key={item._id} style={{
-              background: C.card, border: `1px solid ${C.border}`,
+              background: 'var(--surface)', border: '1px solid var(--border)',
               borderRadius: 12, padding: '16px 20px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
               opacity: 0.6,
             }}>
               <div>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
                   {item.supplier || '—'}
                 </div>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 12, color: C.sec }}>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 12, color: 'var(--text3)' }}>
                   {item.value > 0 ? fmt(item.value) : '—'} · Venc. {item.due ? fmtDate(item.due) : '—'}
                 </div>
               </div>
