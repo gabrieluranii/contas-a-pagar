@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { fmt, fmtDate } from '@/lib/utils';
 import { v4 as uuid } from 'uuid';
@@ -205,6 +205,26 @@ function QueueCard({ item, onView, onApprove, onReject }) {
   );
 }
 
+// ── DB row → local item ──────────────────────────────────────────────────────
+function dbToItem(row) {
+  return {
+    _id:          row.id,
+    emailId:      row.email_id,
+    emailFrom:    row.email_from,
+    emailSubject: row.email_subject,
+    supplier:     row.supplier,
+    value:        row.value,
+    due:          row.due,
+    emission:     row.emission,
+    nf:           row.nf,
+    serie:        row.serie,
+    obs:          row.obs,
+    tipo:         row.tipo,
+    filename:     row.filename,
+    status:       row.status,
+  };
+}
+
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function EmailPage() {
   const { dispatch } = useApp();
@@ -219,6 +239,18 @@ export default function EmailPage() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  // ── Carrega fila persistida ────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/email/queue')
+      .then(r => r.json())
+      .then(d => {
+        const items = d.items || [];
+        setQueue(items.filter(i => i.status === 'pending').map(dbToItem));
+        setRejected(items.filter(i => i.status === 'rejected').map(dbToItem));
+      })
+      .catch(() => {});
+  }, []);
 
   // ── pdf.js loader ──────────────────────────────────────────────────────────
   async function ensurePdfJs() {
@@ -318,10 +350,20 @@ export default function EmailPage() {
         });
       }
 
-      // Evita duplicar emails já na fila
+      // Upsert no Supabase e evita duplicar emails já na fila
+      const upserted = [];
+      for (const item of newItems) {
+        const res = await fetch('/api/email/queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'upsert', item }),
+        });
+        const data = await res.json();
+        if (data.item) upserted.push(dbToItem(data.item));
+      }
       setQueue(prev => {
         const existingIds = new Set(prev.map(i => i.emailId));
-        const fresh = newItems.filter(i => !existingIds.has(i.emailId));
+        const fresh = upserted.filter(i => !existingIds.has(i.emailId));
         return [...fresh, ...prev];
       });
 
@@ -355,6 +397,11 @@ export default function EmailPage() {
         attachments: [],
       },
     });
+    fetch('/api/email/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'approve', id: item._id }),
+    });
     setQueue(prev => prev.filter(i => i._id !== item._id));
     setReviewing(null);
     showToast(`"${item.supplier || 'Item'}" aprovado e adicionado aos pagamentos pendentes!`);
@@ -362,6 +409,11 @@ export default function EmailPage() {
 
   // ── Rejeitar ──────────────────────────────────────────────────────────────
   const handleReject = (item) => {
+    fetch('/api/email/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reject', id: item._id }),
+    });
     setRejected(prev => [{ ...item, rejectedAt: new Date().toISOString() }, ...prev]);
     setQueue(prev => prev.filter(i => i._id !== item._id));
     setReviewing(null);
@@ -458,6 +510,11 @@ export default function EmailPage() {
                 </div>
               </div>
               <Btn small outline onClick={() => {
+                fetch('/api/email/queue', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'restore', id: item._id }),
+                });
                 setQueue(prev => [{ ...item, rejectedAt: undefined }, ...prev]);
                 setRejected(prev => prev.filter(i => i._id !== item._id));
                 setTab('queue');
