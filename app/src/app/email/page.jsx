@@ -127,7 +127,17 @@ export default function EmailPage() {
       else {
         setExtracted(prev => ({
           ...prev,
-          [att.attachmentId]: { ...data.extracted, _attId: att.attachmentId, _id: uuid() },
+          [att.attachmentId]: {
+            supplier: data.extracted.fornecedor || '',
+            value:    data.extracted.valor      || 0,
+            due:      data.extracted.vencimento || '',
+            emission: data.extracted.emissao    || '',
+            nf:       data.extracted.nfnum      || '',
+            obs:      data.extracted.observacao || '',
+            tipo:     data.extracted.tipo       || '',
+            _attId:   att.attachmentId,
+            _id:      uuid(),
+          },
         }));
         showToast('Dados extraídos — revise e importe.');
       }
