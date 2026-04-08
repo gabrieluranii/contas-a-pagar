@@ -231,6 +231,7 @@ export default function EmailPage() {
   const [queue, setQueue]         = useState([]);
   const [rejected, setRejected]   = useState([]);
   const [loading, setLoading]     = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('');
   const [reviewing, setReviewing] = useState(null);
   const [toast, setToast]         = useState(null);
   const [tab, setTab]             = useState('queue');
@@ -315,6 +316,7 @@ export default function EmailPage() {
   // ── Atualizar: busca emails + extrai tudo ─────────────────────────────────
   const handleRefresh = async () => {
     setLoading(true);
+    setLoadingMsg('Conectando ao Gmail...');
     try {
       const res = await fetch('/api/email/fetch');
       const d = await res.json();
@@ -322,11 +324,13 @@ export default function EmailPage() {
 
       const emails = d.emails || [];
       const newItems = [];
+      setLoadingMsg(`${emails.length} e-mail(s) encontrado(s). Extraindo anexos...`);
 
       for (const email of emails) {
         const results = [];
         for (const att of email.attachments) {
           try {
+            setLoadingMsg(`Extraindo: ${att.filename}`);
             const extracted = await extractAttachment(att);
             results.push(extracted);
           } catch { /* ignora anexo com erro */ }
@@ -430,6 +434,30 @@ export default function EmailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '32px 40px' }}>
+
+      {loading && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 900,
+          background: 'var(--bg)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 20,
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%',
+            border: '4px solid var(--border)',
+            borderTopColor: 'var(--nav-orange)',
+            animation: 'spin 0.8s linear infinite',
+          }}/>
+          <div style={{
+            fontFamily: 'Poppins, sans-serif', fontSize: 14,
+            fontWeight: 500, color: 'var(--text2)', textAlign: 'center',
+            maxWidth: 320,
+          }}>
+            {loadingMsg}
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
 
       {toast && (
         <div style={{
