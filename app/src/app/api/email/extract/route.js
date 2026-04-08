@@ -5,11 +5,11 @@ Campos requeridos:
 - fornecedor (string): Nome do emissor ou recebedor.
 - valor (number): Valor total a pagar numérico (ex: 1540.50).
 - emissao (string): Data de emissão no formato YYYY-MM-DD.
-- nfnum (string): Número da nota fiscal (se houver).
-- nfserie (string): Série da nota fiscal (se houver).
+- nfnum (string): Número do documento — tente nesta ordem: número da nota fiscal, número do documento, número do protocolo, número do pedido, número de série do documento, qualquer sequência numérica identificadora. Nunca retorne null se houver qualquer número identificador no documento.
+- nfserie (string): Série da nota fiscal (se houver, caso contrário retorne "1").
 - vencimento (string): Data de vencimento no formato YYYY-MM-DD.
 - observacao (string): Linha digitável ou resumo.
-- tipo (string): "boleto", "nf", "merged" ou "outro".
+- tipo (string): "boleto", "nf", "merged" (se tiver ambos) ou "outro".
 Retorne APENAS o JSON vazio se não entender nada.`;
 
 export async function POST(req) {
