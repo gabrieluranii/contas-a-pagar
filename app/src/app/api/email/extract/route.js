@@ -1,4 +1,3 @@
-import { downloadAttachment } from '@/lib/gmail';
 import { NextResponse } from 'next/server';
 
 const EXTRACTION_PROMPT = `Extraia os seguintes campos do documento anexo (Boleto ou Nota Fiscal). Retorne EXATAMENTE e APENAS um JSON válido. Não inclua Markdown, backticks ou texto extra.
@@ -15,15 +14,10 @@ Retorne APENAS o JSON vazio se não entender nada.`;
 
 export async function POST(req) {
   try {
-    const { messageId, attachmentId, filename } = await req.json();
-
-    const base64url = await downloadAttachment(messageId, attachmentId);
-    const base64Data = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const { base64, mimeType, filename } = await req.json();
 
     const key = process.env.GROQ_API_KEY;
-    if (!key) {
-      return NextResponse.json({ error: 'Chave do Groq não configurada.' }, { status: 500 });
-    }
+    if (!key) return NextResponse.json({ error: 'Chave Groq não configurada.' }, { status: 500 });
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -33,23 +27,13 @@ export async function POST(req) {
       },
       body: JSON.stringify({
         model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:application/pdf;base64,${base64Data}`,
-                },
-              },
-              {
-                type: 'text',
-                text: EXTRACTION_PROMPT,
-              },
-            ],
-          },
-        ],
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+            { type: 'text', text: EXTRACTION_PROMPT },
+          ],
+        }],
         temperature: 0,
         max_tokens: 1024,
       }),
@@ -57,18 +41,15 @@ export async function POST(req) {
 
     if (!res.ok) {
       const err = await res.json();
-      return NextResponse.json(
-        { error: err.error?.message || 'Falha na API do Groq' },
-        { status: res.status }
-      );
+      return NextResponse.json({ error: err.error?.message || 'Falha Groq' }, { status: res.status });
     }
 
     const data = await res.json();
     const raw = data.choices?.[0]?.message?.content || '{}';
-
     let extracted = {};
     try {
-      extracted = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      const match = raw.replace(/```json|```/g, '').trim().match(/\{[\s\S]*\}/);
+      if (match) extracted = JSON.parse(match[0]);
     } catch { extracted = {}; }
 
     return NextResponse.json({ extracted, filename });

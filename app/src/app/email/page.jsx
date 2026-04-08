@@ -79,13 +79,47 @@ export default function EmailPage() {
   const handleExtract = async (att) => {
     setExtracting(prev => ({ ...prev, [att.attachmentId]: true }));
     try {
+      // 1. Baixa o PDF
+      const attRes = await fetch('/api/email/attachment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: att.messageId, attachmentId: att.attachmentId }),
+      });
+      const attData = await attRes.json();
+      if (attData.error) throw new Error(attData.error);
+
+      // 2. Converte PDF → imagem JPEG no browser com pdf.js
+      if (!window.pdfjsLib) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      const pdfBytes = Uint8Array.from(atob(attData.base64), c => c.charCodeAt(0));
+      const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+      // 3. Envia imagem para extração
       const res = await fetch('/api/email/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messageId:    att.messageId,
-          attachmentId: att.attachmentId,
-          filename:     att.filename,
+          base64: imageBase64,
+          mimeType: 'image/jpeg',
+          filename: att.filename,
         }),
       });
       const data = await res.json();
