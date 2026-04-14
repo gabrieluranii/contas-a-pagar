@@ -1,17 +1,24 @@
 import { NextResponse } from 'next/server';
 
-const EXTRACTION_PROMPT = `Extraia os seguintes campos do documento anexo (Boleto ou Nota Fiscal). Retorne EXATAMENTE e APENAS um JSON válido. Não inclua Markdown, backticks ou texto extra.
-Campos requeridos:
-- fornecedor (string): Nome do emissor ou recebedor.
-- valor (number): Valor total a pagar numérico (ex: 1540.50).
-- emissao (string): Data de emissão no formato YYYY-MM-DD.
-- nfnum (string): Número da nota fiscal (se houver).
-- nfserie (string): Série da nota fiscal (se houver).
-- vencimento (string): Data de vencimento no formato YYYY-MM-DD.
-- observacao (string): Linha digitável ou resumo.
-- tipo (string): "boleto", "nf", "merged" (se tiver ambos) ou "outro".
-Retorne APENAS o JSON vazio se não entender nada.
-`;
+const EXTRACTION_PROMPT = `Você é um especialista em documentos fiscais brasileiros. Analise o documento e extraia os dados retornando EXATAMENTE e APENAS um JSON válido, sem Markdown, sem backticks, sem texto extra.
+
+REGRAS IMPORTANTES:
+1. Datas brasileiras estão no formato DD/MM/YYYY. Converta SEMPRE para YYYY-MM-DD. Exemplo: 09/05/2026 → 2026-05-09
+2. O campo "tipo" deve ser: "boleto" se for boleto bancário, "nf" se for nota fiscal eletrônica (NF-e/DANFE), "merged" se o documento contiver boleto E nota fiscal, ou "outro" se não identificar
+3. O valor deve ser numérico sem formatação. Exemplo: R$ 1.147,50 → 1147.50
+4. Se não encontrar um campo, retorne null
+
+Campos a extrair:
+- fornecedor (string): Nome do emitente/beneficiário/fornecedor
+- valor (number): Valor total do documento
+- emissao (string): Data de emissão no formato YYYY-MM-DD
+- nfnum (string): Número da NF ou número do documento/boleto
+- nfserie (string): Série da nota fiscal, se não houver retorne "1"
+- vencimento (string): Data de vencimento no formato YYYY-MM-DD
+- observacao (string): Linha digitável do boleto ou descrição do serviço
+- tipo (string): "boleto", "nf", "merged" ou "outro"
+
+Retorne APENAS o JSON, nada mais.`;
 
 export async function POST(req) {
   try {
