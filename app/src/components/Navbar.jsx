@@ -326,7 +326,7 @@ export default function Navbar() {
           <NavItem href="/"             icon={<HomeIcon/>}  label="Página Inicial"     expanded={expanded}/>
           <NavItem href="/calendario"   icon={<CalIcon/>}   label="Calendário"         expanded={expanded}/>
           <NavItem href="/dashboards"   icon={<DashIcon/>}  label="Dashboards"         expanded={expanded}/>
-          <NavItem href="/email"        icon={<EmailIcon/>} label="Email"              expanded={expanded}/>
+          <NavItem href="/email"        icon={<EmailIcon/>} label="Modo IA"            expanded={expanded}/>
           <Div/>
           <NavItem href="/contas"       icon={<CardIcon/>}  label="Pagamentos Pendentes" expanded={expanded} badge={urgentCount}/>
           <NavItem href="/lancamentos"  icon={<ZapIcon/>}   label="Lançamentos"        expanded={expanded}/>
