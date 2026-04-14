@@ -76,6 +76,7 @@ function ApproveModal({ item, onConfirm, onCancel }) {
 
 function TinderStack({ queue, onApprove, onReject, onUpdate }) {
   const [anim, setAnim] = useState(null);
+  const [extracting, setExtracting] = useState(false);
   const current = queue[0];
 
   if (!current) return (
@@ -89,10 +90,76 @@ function TinderStack({ queue, onApprove, onReject, onUpdate }) {
   const handleReject = () => { setAnim('left'); setTimeout(() => { onReject(current); setAnim(null); }, 380); };
   const handleApprove = () => { setAnim('right'); setTimeout(() => { onApprove(current); setAnim(null); }, 380); };
 
+  const hasData = current.supplier || current.value > 0;
   const isB = current.tipo === 'boleto';
 
+  const handleExtract = async () => {
+    setExtracting(true);
+    try {
+      const attRes = await fetch('/api/email/fetch-attachment', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: current.emailId }),
+      });
+      const attData = await attRes.json();
+      if (attData.error) throw new Error(attData.error);
+
+      if (!window.pdfjsLib) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          script.onload = resolve; script.onerror = reject;
+          document.head.appendChild(script);
+        });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      const pdfBytes = Uint8Array.from(atob(attData.base64), c => c.charCodeAt(0));
+      const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+      const res = await fetch('/api/ocr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mimeType: 'image/jpeg', base64Data: imageBase64 }),
+      });
+      const data = await res.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      let parsed = {};
+      try { const m = cleaned.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
+
+      const updated = {
+        ...current,
+        supplier: parsed.fornecedor || '',
+        value:    parsed.valor      || 0,
+        due:      parsed.vencimento || '',
+        emission: parsed.emissao    || '',
+        nf:       parsed.nfnum ? String(parseInt(parsed.nfnum, 10)) : '',
+        serie:    parsed.nfserie    || '1',
+        obs:      parsed.observacao || '',
+        tipo:     parsed.tipo       || 'outro',
+        filename: attData.filename || current.filename,
+        attachmentBase64: attData.base64,
+      };
+
+      await fetch('/api/email/queue', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'upsert', item: { ...updated, emailId: current.emailId, emailFrom: current.emailFrom, emailSubject: current.emailSubject } }),
+      });
+
+      onUpdate(updated);
+    } catch(e) {
+      console.error('[extract]', e);
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const ghostCard = (item, widthPct) => {
-    const isGB = item.tipo === 'boleto';
     const h = widthPct === 60 ? 336 : 240;
     return (
       <div style={{
@@ -104,24 +171,19 @@ function TinderStack({ queue, onApprove, onReject, onUpdate }) {
         pointerEvents: 'none',
         display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ flex: 1, padding: '20px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ flex: 1, padding: '16px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 6 }}>
               <span style={{
-                display: 'inline-block', padding: '2px 8px', borderRadius: 20,
-                fontSize: 9, fontWeight: 700, letterSpacing: '1px', fontFamily: 'Poppins, sans-serif',
-                background: isGB ? 'rgba(201,150,26,0.12)' : 'rgba(74,158,106,0.12)',
-                color: isGB ? 'var(--warning)' : 'var(--accent)',
-              }}>{isGB ? 'BOLETO' : 'NOTA FISCAL'}</span>
+                display: 'inline-block', padding: '2px 7px', borderRadius: 20,
+                fontSize: 8, fontWeight: 700, letterSpacing: '1px', fontFamily: 'Poppins, sans-serif',
+                background: 'rgba(90,154,213,0.12)', color: 'var(--info)',
+              }}>✉ EMAIL</span>
             </div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{item.supplier || '—'}</div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--nav-orange)' }}>{item.value > 0 ? fmt(item.value) : '—'}</div>
+            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{item.supplier || item.emailSubject || '—'}</div>
+            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 18, fontWeight: 700, color: 'var(--nav-orange)' }}>{item.value > 0 ? fmt(item.value) : '—'}</div>
           </div>
-          {item.due && (
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, color: 'var(--text3)' }}>
-              Venc. {fmtDate(item.due)}
-            </div>
-          )}
+          {item.due && <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 10, color: 'var(--text3)' }}>Venc. {fmtDate(item.due)}</div>}
         </div>
       </div>
     );
@@ -133,17 +195,16 @@ function TinderStack({ queue, onApprove, onReject, onUpdate }) {
         1 de {queue.length} na fila
       </div>
 
-      {/* Stack horizontal — cards fantasma à esquerda, principal à direita */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginLeft: 80 }}>
 
-        {/* Card 3 — mostra 35% */}
+        {/* Card 3 — 35% */}
         {queue[2] && (
           <div style={{ opacity: 0.35, marginRight: -210 }}>
             {ghostCard(queue[2], 35)}
           </div>
         )}
 
-        {/* Card 2 — mostra 60% */}
+        {/* Card 2 — 60% */}
         {queue[1] && (
           <div style={{ opacity: 0.6, marginRight: -130, zIndex: 1, position: 'relative' }}>
             {ghostCard(queue[1], 60)}
@@ -155,92 +216,64 @@ function TinderStack({ queue, onApprove, onReject, onUpdate }) {
           width: 320, height: 450, flexShrink: 0,
           background: 'var(--surface)', border: '1px solid var(--border2)',
           borderRadius: 18, overflow: 'hidden',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.13)',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.13)', zIndex: 2, position: 'relative',
           display: 'flex', flexDirection: 'column',
-          zIndex: 2, position: 'relative',
           transition: 'transform 0.38s cubic-bezier(.4,0,.2,1), opacity 0.38s ease',
           ...(anim === 'left' ? { transform: 'translateX(-500px) rotate(-15deg)', opacity: 0 } :
               anim === 'right' ? { transform: 'translateX(500px) rotate(15deg)', opacity: 0 } : {}),
         }}>
-          <div style={{ padding: '24px 22px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Tag Email */}
-            {current.fromEmail && (
-              <div style={{ marginBottom: 12 }}>
-                <span style={{
-                  display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                  fontSize: 9, fontWeight: 700, letterSpacing: '1px', fontFamily: 'Poppins, sans-serif',
-                  background: 'rgba(90,154,213,0.12)', color: 'var(--info)',
-                }}>✉ EMAIL</span>
+          {/* Topo — tag + nome fornecedor */}
+          <div style={{ padding: '18px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{
+                display: 'inline-block', padding: '2px 8px', borderRadius: 20,
+                fontSize: 9, fontWeight: 700, letterSpacing: '1px', fontFamily: 'Poppins, sans-serif',
+                background: 'rgba(90,154,213,0.12)', color: 'var(--info)',
+              }}>✉ EMAIL</span>
+            </div>
+            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
+              {current.supplier || current.emailSubject || '—'}
+            </div>
+            {current.filename && (
+              <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+                📎 {current.filename}
               </div>
             )}
+          </div>
 
-            {/* Se não tem dados — mostrar botão extrair centralizado */}
-            {!current.supplier && !current.value ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>
-                  {current.filename || 'Anexo PDF'}
+          {/* Corpo */}
+          <div style={{ flex: 1, padding: '16px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            {!hasData ? (
+              /* Sem dados — botão extrair */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, height: '100%' }}>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>
+                  Dados ainda não extraídos
                 </div>
                 <button
-                  onClick={async () => {
-                    try {
-                      const attRes = await fetch('/api/email/fetch-attachment', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messageId: current.emailId }),
-                      });
-                      const attData = await attRes.json();
-                      if (attData.error) throw new Error(attData.error);
-                      if (!window.pdfjsLib) {
-                        await new Promise((resolve, reject) => {
-                          const script = document.createElement('script');
-                          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                          script.onload = resolve; script.onerror = reject;
-                          document.head.appendChild(script);
-                        });
-                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                      }
-                      const pdfBytes = Uint8Array.from(atob(attData.base64), c => c.charCodeAt(0));
-                      const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
-                      const page = await pdf.getPage(1);
-                      const viewport = page.getViewport({ scale: 2.0 });
-                      const canvas = document.createElement('canvas');
-                      canvas.width = viewport.width; canvas.height = viewport.height;
-                      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                      const imageBase64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-                      const res = await fetch('/api/ocr', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mimeType: 'image/jpeg', base64Data: imageBase64 }),
-                      });
-                      const data = await res.json();
-                      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                      const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-                      let parsed = {};
-                      try { const m = cleaned.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
-                      const updated = {
-                        ...current,
-                        supplier: parsed.fornecedor || '',
-                        value: parsed.valor || 0,
-                        due: parsed.vencimento || '',
-                        emission: parsed.emissao || '',
-                        nf: parsed.nfnum ? String(parseInt(parsed.nfnum, 10)) : '',
-                        serie: parsed.nfserie || '1',
-                        obs: parsed.observacao || '',
-                        tipo: parsed.tipo || 'outro',
-                      };
-                      onUpdate(updated);
-                    } catch(e) { console.error(e); }
-                  }}
+                  onClick={handleExtract}
+                  disabled={extracting}
                   style={{
                     padding: '10px 24px', borderRadius: 10,
                     border: '1.5px solid var(--nav-orange)',
-                    background: 'transparent', color: 'var(--nav-orange)',
+                    background: extracting ? 'var(--surface2)' : 'transparent',
+                    color: 'var(--nav-orange)',
                     fontFamily: 'Poppins, sans-serif', fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: extracting ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
                   }}
-                >⚡ Extrair dados</button>
+                >
+                  {extracting ? (
+                    <>
+                      <div style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--border)', borderTopColor: 'var(--nav-orange)', animation: 'spin 0.8s linear infinite' }}/>
+                      Extraindo...
+                    </>
+                  ) : '⚡ Extrair dados'}
+                </button>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
             ) : (
+              /* Com dados */
               <>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{current.supplier || '—'}</div>
                 <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 26, fontWeight: 700, color: 'var(--nav-orange)', marginBottom: 16 }}>{current.value > 0 ? fmt(current.value) : '—'}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {!isB && <>
@@ -267,16 +300,23 @@ function TinderStack({ queue, onApprove, onReject, onUpdate }) {
               </>
             )}
           </div>
-          <div style={{ height: 1, background: 'var(--border)' }}/>
-          <div style={{ display: 'flex' }}>
-            <button onClick={handleReject} style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', color: 'var(--danger)', fontSize: 20, cursor: 'pointer', borderRight: '1px solid var(--border)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background='rgba(207,85,85,0.06)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>✕</button>
-            <button onClick={handleApprove} style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 20, cursor: 'pointer', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background='rgba(74,158,106,0.06)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>✓</button>
-          </div>
+
+          {/* Botões — só aparecem se tiver dados */}
+          {hasData && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)' }}/>
+              <div style={{ display: 'flex' }}>
+                <button onClick={handleReject} style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', color: 'var(--danger)', fontSize: 20, cursor: 'pointer', borderRight: '1px solid var(--border)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background='rgba(207,85,85,0.06)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>✕</button>
+                <button onClick={handleApprove} style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 20, cursor: 'pointer', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background='rgba(74,158,106,0.06)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>✓</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
 
 function ChatPanel({ onExtracted }) {
   const [extracted, setExtracted] = useState(null);
@@ -642,7 +682,8 @@ export default function EmailPage() {
   const handleApprove = (item) => setApprovingItem(item);
 
   const handleConfirmApprove = (item, { gestor, base, cat }) => {
-    dispatch({ type: 'ADD_BILL', payload: { id: uuid(), supplier: item.supplier || '', value: item.value || 0, due: item.due || '', emission: item.emission || '', nfnum: item.nf || '', nfserie: item.serie || '1', obs: item.obs || 'Importado via e-mail', status: 'pending', gestor, base, cat, rateio: [], tvo: null, conting: null, attachments: [] } });
+    const attList = item.attachmentBase64 ? [{ name: item.filename || 'anexo.pdf', type: 'image/jpeg', data: `data:image/jpeg;base64,${item.attachmentBase64}` }] : [];
+    dispatch({ type: 'ADD_BILL', payload: { id: uuid(), supplier: item.supplier || '', value: item.value || 0, due: item.due || '', emission: item.emission || '', nfnum: item.nf || '', nfserie: item.serie || '1', obs: item.obs || 'Importado via e-mail', status: 'pending', gestor, base, cat, rateio: [], tvo: null, conting: null, attachments: attList } });
     fetch('/api/email/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve', id: item._id }) });
     setQueue(prev => prev.filter(i => i._id !== item._id));
     setApprovingItem(null);
