@@ -183,9 +183,9 @@ function TinderStack({ queue, onApprove, onReject, onUpdate }) {
                 <button
                   onClick={async () => {
                     try {
-                      const attRes = await fetch('/api/email/attachment', {
+                      const attRes = await fetch('/api/email/fetch-attachment', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messageId: current.emailId, attachmentId: current.attachmentId }),
+                        body: JSON.stringify({ messageId: current.emailId }),
                       });
                       const attData = await attRes.json();
                       if (attData.error) throw new Error(attData.error);
