@@ -11,6 +11,7 @@ function dbToItem(row) {
     value: Number(row.value) || 0, due: row.due, emission: row.emission,
     nf: row.nf, serie: row.serie, obs: row.obs, tipo: row.tipo,
     filename: row.filename, status: row.status,
+    fromEmail: true,
   };
 }
 
@@ -73,7 +74,7 @@ function ApproveModal({ item, onConfirm, onCancel }) {
   );
 }
 
-function TinderStack({ queue, onApprove, onReject }) {
+function TinderStack({ queue, onApprove, onReject, onUpdate }) {
   const [anim, setAnim] = useState(null);
   const current = queue[0];
 
@@ -161,39 +162,110 @@ function TinderStack({ queue, onApprove, onReject }) {
           ...(anim === 'left' ? { transform: 'translateX(-500px) rotate(-15deg)', opacity: 0 } :
               anim === 'right' ? { transform: 'translateX(500px) rotate(15deg)', opacity: 0 } : {}),
         }}>
-          <div style={{ padding: '24px 22px 18px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div style={{ marginBottom: 12 }}>
-              <span style={{
-                display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                fontSize: 10, fontWeight: 700, letterSpacing: '1px', fontFamily: 'Poppins, sans-serif',
-                background: isB ? 'rgba(201,150,26,0.12)' : 'rgba(74,158,106,0.12)',
-                color: isB ? 'var(--warning)' : 'var(--accent)',
-              }}>{isB ? 'BOLETO' : current.tipo === 'nf' ? 'NOTA FISCAL' : current.tipo === 'merged' ? 'NF + BOLETO' : 'DOCUMENTO'}</span>
-            </div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{current.supplier || '—'}</div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 26, fontWeight: 700, color: 'var(--nav-orange)', marginBottom: 16 }}>{current.value > 0 ? fmt(current.value) : '—'}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {!isB && <>
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Nº NF</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.nf || '—'}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Série</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.serie || '1'}</div>
-                </div>
-              </>}
-              <div style={isB ? { gridColumn: '1 / -1' } : {}}>
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Vencimento</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.due ? fmtDate(current.due) : '—'}</div>
+          <div style={{ padding: '24px 22px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* Tag Email */}
+            {current.fromEmail && (
+              <div style={{ marginBottom: 12 }}>
+                <span style={{
+                  display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+                  fontSize: 9, fontWeight: 700, letterSpacing: '1px', fontFamily: 'Poppins, sans-serif',
+                  background: 'rgba(90,154,213,0.12)', color: 'var(--info)',
+                }}>✉ EMAIL</span>
               </div>
-              {!isB && (
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Emissão</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.emission ? fmtDate(current.emission) : '—'}</div>
+            )}
+
+            {/* Se não tem dados — mostrar botão extrair centralizado */}
+            {!current.supplier && !current.value ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>
+                  {current.filename || 'Anexo PDF'}
                 </div>
-              )}
-            </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const attRes = await fetch('/api/email/attachment', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messageId: current.emailId, attachmentId: current.attachmentId }),
+                      });
+                      const attData = await attRes.json();
+                      if (attData.error) throw new Error(attData.error);
+                      if (!window.pdfjsLib) {
+                        await new Promise((resolve, reject) => {
+                          const script = document.createElement('script');
+                          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                          script.onload = resolve; script.onerror = reject;
+                          document.head.appendChild(script);
+                        });
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                      }
+                      const pdfBytes = Uint8Array.from(atob(attData.base64), c => c.charCodeAt(0));
+                      const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                      const page = await pdf.getPage(1);
+                      const viewport = page.getViewport({ scale: 2.0 });
+                      const canvas = document.createElement('canvas');
+                      canvas.width = viewport.width; canvas.height = viewport.height;
+                      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                      const imageBase64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+                      const res = await fetch('/api/ocr', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mimeType: 'image/jpeg', base64Data: imageBase64 }),
+                      });
+                      const data = await res.json();
+                      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+                      const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+                      let parsed = {};
+                      try { const m = cleaned.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
+                      const updated = {
+                        ...current,
+                        supplier: parsed.fornecedor || '',
+                        value: parsed.valor || 0,
+                        due: parsed.vencimento || '',
+                        emission: parsed.emissao || '',
+                        nf: parsed.nfnum ? String(parseInt(parsed.nfnum, 10)) : '',
+                        serie: parsed.nfserie || '1',
+                        obs: parsed.observacao || '',
+                        tipo: parsed.tipo || 'outro',
+                      };
+                      onUpdate(updated);
+                    } catch(e) { console.error(e); }
+                  }}
+                  style={{
+                    padding: '10px 24px', borderRadius: 10,
+                    border: '1.5px solid var(--nav-orange)',
+                    background: 'transparent', color: 'var(--nav-orange)',
+                    fontFamily: 'Poppins, sans-serif', fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >⚡ Extrair dados</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{current.supplier || '—'}</div>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 26, fontWeight: 700, color: 'var(--nav-orange)', marginBottom: 16 }}>{current.value > 0 ? fmt(current.value) : '—'}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {!isB && <>
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Nº NF</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.nf || '—'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Série</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.serie || '1'}</div>
+                    </div>
+                  </>}
+                  <div style={isB ? { gridColumn: '1 / -1' } : {}}>
+                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Vencimento</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.due ? fmtDate(current.due) : '—'}</div>
+                  </div>
+                  {!isB && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 3, fontFamily: 'Poppins, sans-serif' }}>Emissão</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'Poppins, sans-serif' }}>{current.emission ? fmtDate(current.emission) : '—'}</div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <div style={{ height: 1, background: 'var(--border)' }}/>
           <div style={{ display: 'flex' }}>
@@ -454,7 +526,7 @@ function ChatPanel({ onExtracted }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button style={{ ...btnStyle('var(--accent)'), flex: 1 }} onClick={() => onExtracted(extracted)}>✓ Aprovar</button>
+            <button style={{ ...btnStyle('var(--accent)'), flex: 1 }} onClick={() => { onExtracted(extracted); setExtracted(null); setNfFile(null); setBoletoFile(null); setStatus(''); }}>✓ Aprovar</button>
             <button style={{ ...btnStyle('var(--danger)'), flex: 1 }} onClick={handleReset}>✕ Recusar</button>
           </div>
           <button style={{ ...btnStyle('var(--text3)'), flex: 'unset', width: '100%' }} onClick={handleReset}>↺ Refazer</button>
@@ -622,11 +694,11 @@ export default function EmailPage() {
       </div>
 
       {/* Main content */}
-      <div style={{ background: 'var(--surface2)', borderRadius: 24, padding: 32, display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
+      <div style={{ background: 'var(--surface2)', borderRadius: 24, padding: 32, display: 'flex', gap: 24, alignItems: 'flex-start', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
 
         {/* Esquerda — Fila ou Rejeitados */}
-        <div style={{ borderRadius: 16, padding: 24, minHeight: 560 }}>
-          {tab === 'queue' && <TinderStack queue={queue} onApprove={handleApprove} onReject={handleReject} />}
+        <div style={{ borderRadius: 16, padding: 24, minHeight: 560, flex: 1, minWidth: 0 }}>
+          {tab === 'queue' && <TinderStack queue={queue} onApprove={handleApprove} onReject={handleReject} onUpdate={(updated) => setQueue(prev => prev.map(i => i._id === updated._id ? updated : i))} />}
           {tab === 'rejected' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rejected.length === 0 && <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontFamily: 'Poppins, sans-serif', fontSize: 13 }}>Nenhum item rejeitado.</div>}
@@ -644,7 +716,7 @@ export default function EmailPage() {
         </div>
 
         {/* Direita — Chat Panel */}
-        <div style={{ background: 'var(--bg)', borderRadius: 16, padding: 20, minHeight: 560, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'var(--bg)', borderRadius: 16, padding: 20, minHeight: 560, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', width: 340, flexShrink: 0 }}>
           <ChatPanel onExtracted={handleChatExtracted} />
         </div>
       </div>
