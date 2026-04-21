@@ -345,6 +345,7 @@ export default function CalendarioPage() {
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditId(null); }}
         editId={editId}
+        readOnly={true}
       />
     </>
   );

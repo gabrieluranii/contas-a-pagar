@@ -35,6 +35,8 @@ export function urgencyClass(b) {
 }
 
 export function urgencyPillText(b) {
+  if (!b.due || isNaN(new Date(b.due + 'T00:00:00'))) return null;
+
   const st = urgencyStatus(b);
   const daysLeft = daysUntil(b.due);
   const launchDate = new Date(b.due + 'T00:00:00');

@@ -3,52 +3,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
-import { fmt, fmtDate, isOverdue, daysUntil, LAUNCH_DAYS } from '@/lib/utils';
-
-function TvoCard({ b, onAction, onDelete, mode }) {
-  const isAguardando = mode === 'aguardando';
-  return (
-    <div style={{
-      background: isAguardando ? 'var(--warning-light)' : 'var(--surface)',
-      border: `1px solid ${isAguardando ? '#4a3810' : 'var(--border)'}`,
-      borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem', marginBottom: '1rem',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: '0.75rem' }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)' }}>{b.supplier}</div>
-          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <span>Venc. {fmtDate(b.due)}</span>
-            {b.emission && <span>Emissão: {fmtDate(b.emission)}</span>}
-            {b.base && <span style={{ background: 'var(--info-light)', color: 'var(--info)', fontSize: 11, padding: '2px 7px', borderRadius: 20 }}>{b.base}</span>}
-            {b.cat  && <span style={{ background: 'var(--surface2)', color: 'var(--text2)', fontSize: 11, padding: '2px 7px', borderRadius: 20, border: '1px solid var(--border)' }}>{b.cat}</span>}
-            {isAguardando && <span style={{ color: 'var(--warning)', fontWeight: 500 }}>TVO aprovado</span>}
-          </div>
-        </div>
-        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text)', whiteSpace: 'nowrap' }}>{fmt(b.value)}</div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {!isAguardando && (
-          <button onClick={() => onAction(b.id, 'concluido')} style={{ padding: '5px 14px', fontSize: 13, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
-            TVO Concluído
-          </button>
-        )}
-        {isAguardando && (
-          <>
-            <button onClick={() => onAction(b.id, 'edit')} style={{ padding: '5px 14px', fontSize: 13, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
-              Editar
-            </button>
-            <button onClick={() => onAction(b.id, 'confirmar')} style={{ padding: '5px 14px', fontSize: 13, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>
-              Confirmar lançamento
-            </button>
-          </>
-        )}
-        <button onClick={() => onDelete(b.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 13, padding: '5px 8px', borderRadius: 'var(--radius)', fontFamily: 'inherit' }}>
-          🗑 Excluir
-        </button>
-      </div>
-    </div>
-  );
-}
+import { fmt, fmtDate } from '@/lib/utils';
 
 export default function TvoPage() {
   const { state, dispatch } = useApp();
@@ -101,26 +56,128 @@ export default function TvoPage() {
 
   const activeBases = bases.filter(b => !b.desmobilizado);
 
+  /* ── estilos reutilizáveis ── */
+  const ACCENT = 'var(--nav-orange, #d97757)';
+  const thStyle = {
+    background: ACCENT, color: '#ffffff',
+    fontFamily: 'Poppins, sans-serif', fontSize: 11, fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '1px',
+    padding: '12px 10px', whiteSpace: 'nowrap', textAlign: 'left',
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px', lineHeight: 1.2 }}>TVO e Contingência</div>
-        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#777777', marginTop: 4 }}>Lançamentos aguardando aprovação orçamentária</div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-        {[['tvo','TVO Pendente'],['aguardando','Aguardando confirmação']].map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ padding: '6px 14px', fontSize: 13, fontFamily: 'inherit', borderRadius: 20, border: '1px solid var(--border2)', background: tab === k ? '#e8e4df' : 'transparent', cursor: 'pointer', color: tab === k ? '#111' : 'var(--text2)', transition: 'all 0.15s' }}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div id="tvo-list">
-        {list.length === 0
-          ? <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#777777', fontFamily: 'Inter, sans-serif', fontSize: 13 }}><div style={{ fontSize: 32, marginBottom: '0.75rem', color: '#cccccc' }}>{tab === 'tvo' ? '✓' : '📋'}</div>{tab === 'tvo' ? 'Nenhum TVO pendente' : 'Nenhum lançamento aguardando confirmação'}</div>
-          : list.map(b => <TvoCard key={b.id} b={b} onAction={handleAction} onDelete={handleDelete} mode={tab}/>)
-        }
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: '1.5rem' }}>
+        <div>
+          <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px', lineHeight: 1.2 }}>TVO e Contingência</div>
+          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#777777', marginTop: 4 }}>Lançamentos aguardando aprovação orçamentária</div>
+        </div>
       </div>
 
+      {/* ── Abas pill ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {[['tvo', 'TVO Pendente'], ['aguardando', 'Aguardando confirmação']].map(([k, label]) => {
+          const active = tab === k;
+          return (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              style={{
+                padding: '6px 16px', fontSize: 13,
+                fontFamily: 'Poppins, sans-serif', fontWeight: 500,
+                borderRadius: 20, cursor: 'pointer', transition: 'all 0.15s',
+                border: `1.5px solid ${active ? ACCENT : '#e8e8e5'}`,
+                background: active ? ACCENT : 'transparent',
+                color: active ? '#ffffff' : '#555555',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Tabela ── */}
+      <div style={{ border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)', borderRadius: 'var(--radius-lg)' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="orcamento-table" style={{ minWidth: 700, width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Fornecedor', 'Vencimento', 'Emissão', 'Base / CC', 'Categoria', 'Valor', 'Ações'].map(h => (
+                  <th key={h} style={{ ...thStyle, width: h === 'Ações' ? 200 : undefined }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {list.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#777777', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
+                      <div style={{ fontSize: 32, marginBottom: '0.75rem', color: '#cccccc' }}>
+                        {tab === 'tvo' ? '✓' : '📋'}
+                      </div>
+                      {tab === 'tvo' ? 'Nenhum TVO pendente' : 'Nenhum lançamento aguardando confirmação'}
+                    </div>
+                  </td>
+                </tr>
+              ) : list.map((b, idx) => {
+                const isAguardando = tab === 'aguardando';
+                const rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--bg)';
+                return (
+                  <tr key={b.id} style={{ background: rowBg, borderBottom: '1px solid var(--border)', height: 52 }}>
+                    <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', padding: '0 10px', maxWidth: 200 }}>
+                      <div style={{ fontWeight: 500 }}>{b.supplier}</div>
+                      {isAguardando && <div style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 500, marginTop: 2 }}>TVO aprovado</div>}
+                    </td>
+                    <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', padding: '0 10px', whiteSpace: 'nowrap' }}>
+                      {b.due ? fmtDate(b.due) : '—'}
+                    </td>
+                    <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', padding: '0 10px', whiteSpace: 'nowrap' }}>
+                      {b.emission ? fmtDate(b.emission) : '—'}
+                    </td>
+                    <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', padding: '0 10px' }}>
+                      {b.base
+                        ? <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--info)', background: 'var(--info-light)', borderRadius: 4, padding: '2px 7px' }}>{b.base}</span>
+                        : <span style={{ color: '#aaa' }}>—</span>}
+                    </td>
+                    <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', padding: '0 10px' }}>
+                      {b.cat
+                        ? <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: ACCENT, background: '#fff4ef', border: `1px solid ${ACCENT}`, borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{b.cat}</span>
+                        : <span style={{ color: '#aaa' }}>—</span>}
+                    </td>
+                    <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', padding: '0 10px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      {fmt(b.value)}
+                    </td>
+                    <td style={{ padding: '0 10px' }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {!isAguardando && (
+                          <button onClick={() => handleAction(b.id, 'concluido')} style={{ padding: '4px 10px', fontSize: 12, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 600, background: ACCENT, color: '#fff', border: 'none', whiteSpace: 'nowrap' }}>
+                            TVO Concluído
+                          </button>
+                        )}
+                        {isAguardando && (
+                          <>
+                            <button onClick={() => handleAction(b.id, 'edit')} style={{ padding: '4px 10px', fontSize: 12, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: '#555', border: '1px solid #ccc' }}>
+                              Editar
+                            </button>
+                            <button onClick={() => handleAction(b.id, 'confirmar')} style={{ padding: '4px 10px', fontSize: 12, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 600, background: ACCENT, color: '#fff', border: 'none', whiteSpace: 'nowrap' }}>
+                              Confirmar
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => handleDelete(b.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cc4444', fontSize: 14, padding: 4, lineHeight: 1 }}>✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Modal edição ── */}
       <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title="Editar TVO">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {[['supplier','Fornecedor','text'],['value','Valor','number'],['emission','Emissão','date'],['due','Vencimento','date']].map(([k, label, t]) => (
@@ -158,7 +215,7 @@ export default function TvoPage() {
         </div>
       </Modal>
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={confirmCfg.isOpen}
         message={confirmCfg.message}
         onConfirm={confirmCfg.onConfirm}

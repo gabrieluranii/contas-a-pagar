@@ -8,7 +8,7 @@ function fileIcon(name) {
 }
 
 export default function AttachmentTab({
-  attachments, setAttachments, processOCR, ocrStatus, ocrCls, fileRef
+  attachments, setAttachments, onAddFiles, onPreview, fileRef
 }) {
   const handlePreview = (a) => {
     if (a.url) {
@@ -40,26 +40,21 @@ export default function AttachmentTab({
       <div
         onClick={() => fileRef.current?.click()}
         onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); processOCR(Array.from(e.dataTransfer.files)); }}
+        onDrop={e => { e.preventDefault(); onAddFiles(Array.from(e.dataTransfer.files)); }}
         style={{
           border: '1.5px dashed var(--border2)', borderRadius: 'var(--radius-lg)',
           padding: '1.25rem', marginBottom: '1.25rem', textAlign: 'center',
           cursor: 'pointer', transition: 'all 0.15s', background: 'var(--surface)',
         }}
       >
-        <input ref={fileRef} type="file" accept="image/*,.pdf" multiple onChange={e => processOCR(Array.from(e.target.files))} style={{ display: 'none' }}/>
+        <input ref={fileRef} type="file" accept="image/*,.pdf" multiple onChange={e => onAddFiles(Array.from(e.target.files))} style={{ display: 'none' }}/>
         <div style={{ fontSize: 14, color: 'var(--text2)' }}>
-          <strong style={{ color: 'var(--accent-text)' }}>Clique aqui ou arraste</strong> para fazer upload ou OCR
+          <strong style={{ color: 'var(--accent-text)' }}>Clique aqui ou arraste</strong> para anexar arquivos
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>PDF, imagem • Extrai dados automaticamente via Gemini</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>PDF, imagem</div>
       </div>
 
-      {/* OCR status */}
-      {ocrStatus && (
-        <div style={{ fontSize: 13, marginBottom: '1rem', color: ocrCls === 'loading' ? 'var(--warning)' : ocrCls === 'success' ? 'var(--accent)' : 'var(--danger)' }}>
-          {ocrStatus}
-        </div>
-      )}
+
 
       {/* Attachment list */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -67,12 +62,12 @@ export default function AttachmentTab({
           <div key={i} className="attach-chip" style={{ maxWidth: 220 }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>{fileIcon(a.name)}</span>
             <span 
-              onClick={() => handlePreview(a)}
+              onClick={() => onPreview ? onPreview(a) : handlePreview(a)}
               style={{ 
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-text)'
+                cursor: 'pointer', textDecoration: 'underline', color: 'var(--info, #3b82f6)'
               }} 
-              title="Clique para abrir"
+              title="Clique para visualizar"
             >
               {a.name}
             </span>

@@ -61,6 +61,7 @@ function Sel({ id, value, onChange, children, error, disabled }) {
 export default function BillModal({ open, onClose, editId = null, readOnly = false }) {
   const { state, dispatch } = useApp();
   const [tab, setTab] = useState('form');
+  const [previewAtt, setPreviewAtt] = useState(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -80,9 +81,6 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
 
   // Attachments
   const [attachments, setAttachments] = useState([]);
-  const [ocrStatus, setOcrStatus] = useState('');
-  const [ocrCls, setOcrCls] = useState('');
-  const [ocrPreview, setOcrPreview] = useState('');
 
   // Msg
   const [msg, setMsg] = useState('');
@@ -102,7 +100,6 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
     if (!open) return;
     setTab('form');
     setErrors({});
-    setOcrStatus(''); setOcrCls(''); setOcrPreview('');
     setMsg('');
     if (editId) {
       const b = state.bills.find(x => x.id === editId);
@@ -249,119 +246,16 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
     setTimeout(() => { setMsg(''); onClose?.(); }, 1800);
   }
 
-  // ── Converte PDF para imagem no browser ───────────────────────────────────
-  async function pdfToImageBase64(file) {
-    if (!window.pdfjsLib) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 2.0 });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    return canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-  }
-
-  // ── OCR via Groq ──────────────────────────────────────────────────────────
-  async function processOCR(files) {
+  async function addAttachments(files) {
     for (const file of files) {
-      const b64full = await fileToBase64Full(file);
-      setAttachments(a => [...a.filter(x => x.name !== file.name), { name: file.name, type: file.type, data: b64full }]);
+      const data = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      setAttachments(a => [...a.filter(x => x.name !== file.name), { name: file.name, type: file.type, data }]);
     }
-
-    setOcrStatus(`Processando ${files.length} arquivo(s)...`); setOcrCls('loading');
-    try {
-      for (const file of files) {
-        let b64, mime;
-
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-          setOcrStatus('Convertendo PDF...'); 
-          b64 = await pdfToImageBase64(file);
-          mime = 'image/jpeg';
-        } else {
-          b64 = await fileToBase64(file);
-          mime = file.type || 'image/jpeg';
-        }
-
-        setOcrStatus('Extraindo dados com IA...');
-
-        const res = await fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ mimeType: mime, base64Data: b64 }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || `Erro HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-
-        let parsed = {};
-        try {
-          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-          if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-          else throw new Error('Sem JSON na resposta');
-        } catch {
-          throw new Error('Não foi possível extrair dados do documento. Verifique se é um boleto ou nota fiscal legível.');
-        }
-
-        setForm(f => ({
-          ...f,
-          supplier: parsed.fornecedor  || f.supplier,
-          value:    parsed.valor        != null ? String(parsed.valor) : f.value,
-          emission: parsed.emissao      || f.emission,
-          nfnum:    parsed.nfnum        || f.nfnum,
-          nfserie:  parsed.nfserie      || f.nfserie,
-          due:      parsed.vencimento   || f.due,
-          obs:      parsed.observacao   || f.obs,
-        }));
-
-        const tipoLabel = parsed.tipo === 'boleto' ? 'Boleto' : parsed.tipo === 'nf' ? 'Nota Fiscal' : parsed.tipo === 'merged' ? 'NF + Boleto' : 'Documento';
-        const valorFmt  = parsed.valor != null ? fmt(Number(parsed.valor)) : '—';
-        setOcrPreview(`${tipoLabel}: ${parsed.fornecedor || '—'} · Valor: ${valorFmt} · Venc.: ${parsed.vencimento || '—'}`);
-        setOcrStatus('✓ Dados extraídos! Revise o formulário e salve.'); setOcrCls('success');
-        setTab('form');
-      }
-    } catch (e) {
-      setOcrStatus('Erro: ' + (e.message || 'Falha ao processar o arquivo.')); setOcrCls('error');
-    }
-  }
-
-  async function fileToBase64(file) {
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-  }
-
-  async function fileToBase64Full(file) {
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
   }
 
   const activeBases = state.bases.filter(b => !b.desmobilizado);
@@ -389,12 +283,7 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
       {/* ── FORM TAB ── */}
       {tab === 'form' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {ocrPreview && (
-            <div style={{ gridColumn: '1 / -1', background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: 13, color: 'var(--text2)', borderLeft: '3px solid var(--accent)', marginBottom: 4 }}>
-              <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>Dados extraídos via OCR</strong>
-              {ocrPreview}
-            </div>
-          )}
+
 
           <FormRow full>
             <Label required>Fornecedor</Label>
@@ -499,9 +388,8 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
         <AttachmentTab
           attachments={attachments}
           setAttachments={setAttachments}
-          processOCR={processOCR}
-          ocrStatus={ocrStatus}
-          ocrCls={ocrCls}
+          onAddFiles={addAttachments}
+          onPreview={setPreviewAtt}
           fileRef={fileRef}
         />
       )}
@@ -524,6 +412,50 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
         onConfirm={confirmSaveDuplicate}
         onCancel={() => setShowDupConfirm(false)}
       />
+
+      {previewAtt && (
+        <div
+          onClick={() => setPreviewAtt(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg)', borderRadius: 16, padding: 20,
+              width: '90vw', maxWidth: 700, maxHeight: '90vh',
+              display: 'flex', flexDirection: 'column', gap: 12
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                {previewAtt.name}
+              </span>
+              <button
+                onClick={() => setPreviewAtt(null)}
+                style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text3)' }}
+              >✕</button>
+            </div>
+            {previewAtt.data?.startsWith('data:application/pdf') || previewAtt.data?.startsWith('data:image') ? (
+              previewAtt.data.startsWith('data:image') ? (
+                <img src={previewAtt.data} alt={previewAtt.name} style={{ width: '100%', borderRadius: 8, objectFit: 'contain', maxHeight: '70vh' }} />
+              ) : (
+                <iframe
+                  src={previewAtt.data}
+                  style={{ width: '100%', height: '70vh', border: 'none', borderRadius: 8 }}
+                  title="preview"
+                />
+              )
+            ) : (
+              <div style={{ textAlign: 'center', color: 'var(--text3)', fontFamily: 'Poppins, sans-serif', fontSize: 13, padding: 40 }}>
+                Prévia não disponível para este tipo de arquivo.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

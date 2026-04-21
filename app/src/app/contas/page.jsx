@@ -7,7 +7,7 @@ import BillRow from '@/components/BillRow';
 import BillModal from '@/components/BillModal';
 import PagarModal from '@/components/PagarModal';
 import ConfirmModal from '@/components/ConfirmModal';
-import { fmt, isOverdue, urgencyStatus, LAUNCH_DAYS } from '@/lib/utils';
+import { isOverdue, urgencyStatus, LAUNCH_DAYS } from '@/lib/utils';
 
 function EmptyState({ icon, text }) {
   return (
@@ -79,9 +79,11 @@ export default function ContasPage() {
   const criticalCount = pending.filter(b => urgencyStatus(b) === 'critical').length;
   const urgentTotal   = overdue.length + criticalCount;
 
-  const totalAll  = bills.reduce((s, b) => s + b.value, 0);
-  const totalPend = pending.reduce((s, b) => s + b.value, 0);
-  const totalPaid = paid.reduce((s, b) => s + b.value, 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const in7   = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const venceHoje    = bills.filter(b => b.status === 'pending' && b.due === today).length;
+  const proximos7    = bills.filter(b => b.status === 'pending' && b.due > today && b.due <= in7).length;
+  const totalPendente = bills.filter(b => b.status === 'pending').length;
 
 
 
@@ -115,9 +117,23 @@ export default function ContasPage() {
 
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: '2rem' }}>
-        <MetricCard label="Total geral" value={fmt(totalAll)} sub={`${bills.length} lançamentos`}/>
-        <MetricCard label="Pendente" value={fmt(totalPend)} sub={`${pending.length} contas`} color="red"/>
-        <MetricCard label="Pago" value={fmt(totalPaid)} sub={`${paid.length} contas`} color="green"/>
+        <MetricCard
+          label="Vence hoje"
+          value={venceHoje}
+          sub="lançamentos"
+          color={venceHoje > 0 ? 'red' : undefined}
+        />
+        <MetricCard
+          label="Próximos 7 dias"
+          value={proximos7}
+          sub="lançamentos"
+          color={proximos7 > 0 ? 'yellow' : undefined}
+        />
+        <MetricCard
+          label="Total pendente"
+          value={totalPendente}
+          sub="lançamentos"
+        />
       </div>
 
       {/* Alert */}

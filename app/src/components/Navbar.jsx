@@ -339,9 +339,8 @@ export default function Navbar() {
             isOpen={openGroup === 'cadastro'}
             onToggle={() => toggleGroup('cadastro')}
           >
-            <SubItem href="/cc"                 label="Centro de Custo"/>
-            <SubItem href="/cadastro/produto"   label="Produtos"/>
-            <SubItem href="/cadastro/gestores"  label="Gestores"/>
+            <SubItem href="/cc"                    label="Centro de Custo"/>
+            <SubItem href="/cadastro/categorias"   label="Categorias"/>
           </NavGroup>
           <Div/>
           <NavGroup

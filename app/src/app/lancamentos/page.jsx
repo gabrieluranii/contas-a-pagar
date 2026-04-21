@@ -221,8 +221,8 @@ export default function LancamentosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
-  const [yearF, setYearF] = useState('');
-  const [monthF, setMonthF] = useState('');
+  const [yearF, setYearF] = useState(String(new Date().getFullYear()));
+  const [monthF, setMonthF] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [gestorF, setGestorF] = useState('');
   const [supplierF, setSupplierF] = useState('');
   const [ccF, setCcF] = useState('');
@@ -318,6 +318,31 @@ export default function LancamentosPage() {
 
   const selStyle = { padding: '5px 10px', fontSize: 13, borderRadius: 20, border: '1px solid #e8e8e5', background: '#ffffff', color: '#333333', fontFamily: 'inherit', cursor: 'pointer', width: 'auto', outline: 'none' };
 
+  async function handleExport() {
+    await loadSheetJS();
+    const rows = list.map(l => ({
+      'Gestor': l.gestor || '',
+      'Nº Solicitação': l.solnum || '',
+      'Data Solic.': l.soldate || '',
+      'Fornecedor': l.supplier || '',
+      'NF': l.nf || '',
+      'Emissão': l.emission || '',
+      'Vencimento': l.due || '',
+      'Descrição': l.desc || '',
+      'Categoria': l.cat || '',
+      'Valor': l.value || 0,
+      'Tipo Pgto': l.tipopgto || '',
+      'CC Pgto': l.ccpgto || '',
+      'Observações': l.obs || '',
+    }));
+    const ws = window.XLSX.utils.json_to_sheet(rows);
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
+    const mes = monthF ? `-${monthF}` : '';
+    const ano = yearF ? `-${yearF}` : '';
+    window.XLSX.writeFile(wb, `lancamentos${ano}${mes}.xlsx`);
+  }
+
   return (
     <div>
       {/* Header */}
@@ -328,6 +353,18 @@ export default function LancamentosPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <ImportBtn importRef={importRef} importExcel={importExcel}/>
+          <button
+            onClick={handleExport}
+            style={{
+              padding: '10px 20px', borderRadius: 10,
+              border: '1.5px solid var(--accent)', background: 'transparent',
+              color: 'var(--accent)', fontFamily: 'Poppins, sans-serif',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            ↓ Exportar Excel
+          </button>
           <NewBtn onClick={() => { setEditId(null); setIsReadOnly(false); setModalOpen(true); }}/>
         </div>
         {importMsg && <div style={{ width: '100%', fontSize: 12, color: importMsg.startsWith('✓') ? 'var(--accent)' : 'var(--danger)' }}>{importMsg}</div>}
