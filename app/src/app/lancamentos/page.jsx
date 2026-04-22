@@ -9,7 +9,7 @@ import { validateLancamento } from '@/lib/validation';
 const LANC_COL_MAP = {
   'gestor': 'gestor',
   'no solic': 'solnum', 'nº solic': 'solnum', 'num solic': 'solnum', 'solicitacao': 'solnum', 'numero solicitacao': 'solnum',
-  'data solic': 'soldate', 'data solicitacao': 'soldate', 'data solicitacao': 'soldate', 'data da solicitacao': 'soldate',
+  'data solic': 'soldate', 'data solicitacao': 'soldate', 'data da solicitacao': 'soldate',
   'fornecedor': 'supplier', 'nota fiscal': 'nf', 'nf': 'nf',
   'emissao': 'emission', 'emissão': 'emission', 'vencimento': 'due', 'data vencimento': 'due',
   'descricao': 'desc', 'descrição': 'desc',
@@ -18,7 +18,6 @@ const LANC_COL_MAP = {
   'cc pagamento': 'ccpgto', 'cc pgto': 'ccpgto',
 };
 
-// ── Sub-componentes visuais ───────────────────────────────────────────────────
 function ImportBtn({ importRef, importExcel }) {
   const [hov, setHov] = useState(false);
   return (
@@ -180,14 +179,19 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
     if (editId) {
       const l = state.lancamentos.find(x => x.id === editId);
       if (l) {
-        setForm({ gestor: l.gestor || '', solnum: l.solnum || '', soldate: l.soldate || '', supplier: l.supplier || '', nf: l.nf || '', emission: l.emission || '', due: l.due || '', desc: l.desc || '', cat: l.cat || '', value: l.value || '', tipopgto: l.tipopgto || '', ccpgto: l.ccpgto || '' });
+        setForm({
+          gestor: l.gestor || '', solnum: l.solnum || '', soldate: l.soldate || '',
+          supplier: l.supplier || '', nf: l.nf || '', emission: l.emission || '',
+          due: l.due || '', desc: l.desc || '', cat: l.cat || '',
+          value: l.value || '', tipopgto: l.tipopgto || '', ccpgto: l.ccpgto || '',
+        });
         setAttachments(l.attachments || []);
       }
     } else {
       setForm({ gestor: '', solnum: '', soldate: todayISO(), supplier: '', nf: '', emission: '', due: '', desc: '', cat: '', value: '', tipopgto: '', ccpgto: '' });
       setAttachments([]);
     }
-  });
+  }, [open, editId]); // <-- dependências corretas
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -233,12 +237,12 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
                 {opts.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             ) : (
-              <input 
-                type={type || 'text'} value={form[k]} 
-                onChange={e => setF(k, e.target.value)} 
+              <input
+                type={type || 'text'} value={form[k]}
+                onChange={e => setF(k, e.target.value)}
                 className={errors[k] ? 'field-error' : ''}
                 disabled={readOnly}
-                style={{ 
+                style={{
                   background: readOnly ? 'var(--surface2)' : '#fff',
                   color: readOnly ? '#777' : '#333'
                 }}
@@ -246,6 +250,8 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
             )}
           </div>
         ))}
+
+        {/* CC Pgto com busca */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>CC Pgto</label>
           {readOnly ? (
@@ -254,12 +260,14 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
             <CCSelect value={form.ccpgto} onChange={v => setF('ccpgto', v)} bases={activeBases}/>
           )}
         </div>
+
+        {/* Descrição */}
         <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
-          <textarea 
-            value={form.desc} onChange={e => setF('desc', e.target.value)} 
+          <textarea
+            value={form.desc} onChange={e => setF('desc', e.target.value)}
             rows={2} disabled={readOnly}
-            style={{ 
+            style={{
               resize: 'vertical',
               background: readOnly ? 'var(--surface2)' : '#fff',
               color: readOnly ? '#777' : '#333'
@@ -267,9 +275,12 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
           />
         </div>
       </div>
+
       {/* Anexos */}
       <div style={{ marginTop: '1rem' }}>
-        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>Anexos</label>
+        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>
+          Anexos {attachments.length > 0 && <span style={{ background: '#d97757', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11, marginLeft: 4 }}>{attachments.length}</span>}
+        </label>
         {!readOnly && (
           <div
             onClick={() => fileRef.current?.click()}
@@ -309,8 +320,12 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
               )}
             </div>
           ))}
+          {attachments.length === 0 && readOnly && (
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Nenhum anexo</span>
+          )}
         </div>
       </div>
+
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
         <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
           {readOnly ? 'Fechar' : 'Cancelar'}
@@ -551,10 +566,10 @@ export default function LancamentosPage() {
                   toggleSelect={toggleSelect}
                   onView={() => { setEditId(l.id); setIsReadOnly(true); setModalOpen(true); }}
                   onEdit={() => { setEditId(l.id); setIsReadOnly(false); setModalOpen(true); }}
-                  onDelete={() => setConfirmCfg({ 
-                    isOpen: true, 
-                    message: 'Excluir este lançamento?', 
-                    onConfirm: () => dispatch({ type: 'DELETE_LANC', payload: l.id }) 
+                  onDelete={() => setConfirmCfg({
+                    isOpen: true,
+                    message: 'Excluir este lançamento?',
+                    onConfirm: () => dispatch({ type: 'DELETE_LANC', payload: l.id })
                   })}
                 />
               ))}
@@ -564,8 +579,8 @@ export default function LancamentosPage() {
       </div>
 
       <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly}/>
-      
-      <ConfirmModal 
+
+      <ConfirmModal
         isOpen={confirmCfg.isOpen}
         message={confirmCfg.message}
         onConfirm={confirmCfg.onConfirm}
