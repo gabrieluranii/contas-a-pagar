@@ -267,6 +267,50 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
           />
         </div>
       </div>
+      {/* Anexos */}
+      <div style={{ marginTop: '1rem' }}>
+        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>Anexos</label>
+        {!readOnly && (
+          <div
+            onClick={() => fileRef.current?.click()}
+            style={{ border: '1.5px dashed var(--border2)', borderRadius: 8, padding: '12px', textAlign: 'center', cursor: 'pointer', fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}
+          >
+            Clique aqui ou arraste para anexar arquivos
+            <div style={{ fontSize: 11, marginTop: 2 }}>PDF, imagem</div>
+          </div>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          accept=".pdf,image/*"
+          style={{ display: 'none' }}
+          onChange={e => {
+            const files = Array.from(e.target.files || []);
+            files.forEach(file => {
+              const reader = new FileReader();
+              reader.onload = ev => {
+                setAttachments(prev => [...prev, { name: file.name, type: file.type, data: ev.target.result }]);
+              };
+              reader.readAsDataURL(file);
+            });
+            e.target.value = '';
+          }}
+        />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {attachments.map((att, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 12 }}>
+              <span
+                onClick={() => window.open(att.data, '_blank')}
+                style={{ cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              >{att.name}</span>
+              {!readOnly && (
+                <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, padding: 0 }}>✕</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
         <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
           {readOnly ? 'Fechar' : 'Cancelar'}
