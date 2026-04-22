@@ -188,20 +188,13 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
             )}
           </div>
         ))}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>CC Pgto</label>
-          <input
-            type="text"
-            placeholder="Buscar centro de custo..."
-            value={form.ccpgto}
-            onChange={e => setF('ccpgto', e.target.value)}
-            disabled={readOnly}
-            list="ccpgto-list"
-            style={{ background: readOnly ? 'var(--surface2)' : '#fff', color: readOnly ? '#777' : '#333' }}
-          />
-          <datalist id="ccpgto-list">
-            {activeBases.map(b => <option key={b.nome} value={b.nome}/>)}
-          </datalist>
+          {readOnly ? (
+            <input value={form.ccpgto} disabled style={{ background: 'var(--surface2)', color: '#777' }}/>
+          ) : (
+            <CCSelect value={form.ccpgto} onChange={v => setF('ccpgto', v)} bases={activeBases}/>
+          )}
         </div>
         <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
