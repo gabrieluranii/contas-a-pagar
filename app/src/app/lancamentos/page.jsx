@@ -166,7 +166,6 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
           { k: 'cat', label: 'Cat. Despesa', type: 'select', opts: state.catDespesas.length ? state.catDespesas : state.cats },
           { k: 'value', label: 'Valor (R$)', type: 'number', req: true },
           { k: 'tipopgto', label: 'Tipo Pagamento', type: 'select', opts: ['Boleto', 'Transferência', 'Cartão', 'Dinheiro', 'PIX', 'Cheque'] },
-          { k: 'ccpgto', label: 'CC Pgto', type: 'select', opts: activeBases.map(b => b.nome) },
         ].map(({ k, label, type, req, opts }) => (
           <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{label}{req && <span style={{ color: 'var(--danger)' }}> *</span>}</label>
@@ -189,6 +188,21 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
             )}
           </div>
         ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>CC Pgto</label>
+          <input
+            type="text"
+            placeholder="Buscar centro de custo..."
+            value={form.ccpgto}
+            onChange={e => setF('ccpgto', e.target.value)}
+            disabled={readOnly}
+            list="ccpgto-list"
+            style={{ background: readOnly ? 'var(--surface2)' : '#fff', color: readOnly ? '#777' : '#333' }}
+          />
+          <datalist id="ccpgto-list">
+            {activeBases.map(b => <option key={b.nome} value={b.nome}/>)}
+          </datalist>
+        </div>
         <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
           <textarea 
