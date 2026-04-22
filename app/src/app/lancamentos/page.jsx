@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -116,7 +116,7 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
 
-  useState(() => {
+  useEffect(() => {
     if (!open) return;
     setErrors({});
     if (editId) {
