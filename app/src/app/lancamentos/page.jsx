@@ -106,6 +106,64 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, o
   );
 }
 
+function CCSelect({ value, onChange, bases }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  const filtered = bases.filter(b => b.nome.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div
+        onClick={() => { if (!open) setSearch(''); setOpen(o => !o); }}
+        style={{ padding: '7px 10px', border: '1px solid var(--border2)', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 13, color: value ? '#333' : '#999', display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'none' }}
+      >
+        <span>{value || 'Selecione...'}</span>
+        <span style={{ fontSize: 10, color: '#999' }}>▼</span>
+      </div>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff', border: '1px solid var(--border2)', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', maxHeight: 260, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Buscar..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 4, outline: 'none' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', maxHeight: 200 }}>
+            <div
+              onClick={() => { onChange(''); setOpen(false); }}
+              style={{ padding: '8px 12px', fontSize: 13, color: '#999', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f5f5f3'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >Selecione...</div>
+            {filtered.map(b => (
+              <div
+                key={b.nome}
+                onClick={() => { onChange(b.nome); setOpen(false); }}
+                style={{ padding: '8px 12px', fontSize: 13, color: '#333', cursor: 'pointer', background: value === b.nome ? '#fff4ef' : 'transparent' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f5f5f3'}
+                onMouseLeave={e => e.currentTarget.style.background = value === b.nome ? '#fff4ef' : 'transparent'}
+              >{b.nome}</div>
+            ))}
+            {filtered.length === 0 && <div style={{ padding: '8px 12px', fontSize: 12, color: '#999' }}>Nenhum resultado</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LancModal({ open, onClose, editId, readOnly = false }) {
   const { state, dispatch } = useApp();
   const [form, setForm] = useState({
