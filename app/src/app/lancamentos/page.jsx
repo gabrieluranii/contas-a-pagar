@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
+import AttachmentTab from '@/components/bill-modal/AttachmentTab';
 import { fmt, fmtDate, MONTH_NAMES, normalizeKey, parseExcelDate, parseMoneyValue, todayISO } from '@/lib/utils';
 import { validateLancamento } from '@/lib/validation';
 
@@ -22,16 +23,8 @@ function ImportBtn({ importRef, importExcel }) {
   const [hov, setHov] = useState(false);
   return (
     <label
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        padding: '9px 20px', fontSize: 13, fontFamily: 'inherit',
-        borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500,
-        background: hov ? '#fff4ef' : 'transparent',
-        color: '#d97757', border: '1px solid #d97757',
-        transition: 'background 0.15s',
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-      }}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ padding: '9px 20px', fontSize: 13, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: hov ? '#fff4ef' : 'transparent', color: '#d97757', border: '1px solid #d97757', transition: 'background 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6 }}
     >
       ↑ Importar Excel
       <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={importExcel} style={{ display: 'none' }}/>
@@ -42,33 +35,20 @@ function ImportBtn({ importRef, importExcel }) {
 function NewBtn({ onClick }) {
   const [hov, setHov] = useState(false);
   return (
-    <button onClick={onClick}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{
-        padding: '9px 20px', fontSize: 14, fontFamily: 'inherit',
-        borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500,
-        background: hov ? '#c4663f' : '#d97757',
-        color: '#fff', border: 'none', whiteSpace: 'nowrap',
-        transition: 'background 0.15s',
-      }}
+    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: hov ? '#c4663f' : '#d97757', color: '#fff', border: 'none', whiteSpace: 'nowrap', transition: 'background 0.15s' }}
     >+ Novo lançamento</button>
   );
 }
 
 function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, onView }) {
   const [hov, setHov] = useState(false);
-  const bg = selected.has(l.id) ? 'rgba(217,119,87,0.1)'
-           : hov                ? '#fff4ef'
-           : idx % 2 === 0      ? '#ffffff' : '#f7f7f5';
+  const bg = selected.has(l.id) ? 'rgba(217,119,87,0.1)' : hov ? '#fff4ef' : idx % 2 === 0 ? '#ffffff' : '#f7f7f5';
   return (
-    <tr
-      onClick={() => bulkMode && toggleSelect(l.id)}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <tr onClick={() => bulkMode && toggleSelect(l.id)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ cursor: bulkMode ? 'pointer' : 'default', background: bg, borderBottom: '1px solid #eeeeec', height: 52, transition: 'background 0.12s' }}
     >
-      {bulkMode && (
-        <td><input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSelect(l.id)} onClick={e => e.stopPropagation()} style={{ width: 15, height: 15, accentColor: '#d97757' }}/></td>
-      )}
+      {bulkMode && <td><input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSelect(l.id)} onClick={e => e.stopPropagation()} style={{ width: 15, height: 15, accentColor: '#d97757' }}/></td>}
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.gestor || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.solnum || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.soldate ? fmtDate(l.soldate) : '—'}</td>
@@ -76,27 +56,16 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, o
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.nf || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.emission ? fmtDate(l.emission) : '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.due ? fmtDate(l.due) : '—'}</td>
-      <td>
-        {l.cat
-          ? <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#d97757', background: '#fff4ef', border: '1px solid #d97757', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{l.cat}</span>
-          : <span style={{ color: '#aaa' }}>—</span>
-        }
-      </td>
+      <td>{l.cat ? <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#d97757', background: '#fff4ef', border: '1px solid #d97757', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{l.cat}</span> : <span style={{ color: '#aaa' }}>—</span>}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{fmt(l.value)}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.ccpgto || '—'}</td>
       <td>
         <div style={{ display: 'flex', gap: 4 }}>
           <button onClick={onView} title="Visualizar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', padding: 4 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
           <button onClick={onEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d97757', padding: 4 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <button onClick={onDelete} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#cc4444', fontSize: 14, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
@@ -109,19 +78,15 @@ function CCSelect({ value, onChange, bases }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef(null);
-
   useEffect(() => {
     function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, []);
-
   const filtered = bases.filter(b => b.nome.toLowerCase().includes(search.toLowerCase()));
-
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <div
-        onClick={() => { if (!open) setSearch(''); setOpen(o => !o); }}
+      <div onClick={() => { if (!open) setSearch(''); setOpen(o => !o); }}
         style={{ padding: '7px 10px', border: '1px solid var(--border2)', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 13, color: value ? '#333' : '#999', display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'none' }}
       >
         <span>{value || 'Selecione...'}</span>
@@ -130,26 +95,12 @@ function CCSelect({ value, onChange, bases }) {
       {open && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff', border: '1px solid var(--border2)', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', maxHeight: 260, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
-            <input
-              autoFocus
-              type="text"
-              placeholder="Buscar..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 4, outline: 'none' }}
-            />
+            <input autoFocus type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid var(--border2)', borderRadius: 4, outline: 'none' }}/>
           </div>
           <div style={{ overflowY: 'auto', maxHeight: 200 }}>
-            <div
-              onClick={() => { onChange(''); setOpen(false); }}
-              style={{ padding: '8px 12px', fontSize: 13, color: '#999', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f5f5f3'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >Selecione...</div>
+            <div onClick={() => { onChange(''); setOpen(false); }} style={{ padding: '8px 12px', fontSize: 13, color: '#999', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = '#f5f5f3'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>Selecione...</div>
             {filtered.map(b => (
-              <div
-                key={b.nome}
-                onClick={() => { onChange(b.nome); setOpen(false); }}
+              <div key={b.nome} onClick={() => { onChange(b.nome); setOpen(false); }}
                 style={{ padding: '8px 12px', fontSize: 13, color: '#333', cursor: 'pointer', background: value === b.nome ? '#fff4ef' : 'transparent' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#f5f5f3'}
                 onMouseLeave={e => e.currentTarget.style.background = value === b.nome ? '#fff4ef' : 'transparent'}
@@ -165,48 +116,42 @@ function CCSelect({ value, onChange, bases }) {
 
 function LancModal({ open, onClose, editId, readOnly = false }) {
   const { state, dispatch } = useApp();
-  const [form, setForm] = useState({
-    gestor: '', solnum: '', soldate: '', supplier: '', nf: '', emission: '',
-    due: '', desc: '', cat: '', value: '', tipopgto: '', ccpgto: '',
-  });
+  const [tab, setTab] = useState('form');
+  const [previewAtt, setPreviewAtt] = useState(null);
+  const [form, setForm] = useState({ gestor: '', solnum: '', soldate: '', supplier: '', nf: '', emission: '', due: '', desc: '', cat: '', value: '', tipopgto: '', ccpgto: '' });
   const [attachments, setAttachments] = useState([]);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
+    setTab('form');
     setErrors({});
     if (editId) {
       const l = state.lancamentos.find(x => x.id === editId);
       if (l) {
-        setForm({
-          gestor: l.gestor || '', solnum: l.solnum || '', soldate: l.soldate || '',
-          supplier: l.supplier || '', nf: l.nf || '', emission: l.emission || '',
-          due: l.due || '', desc: l.desc || '', cat: l.cat || '',
-          value: l.value || '', tipopgto: l.tipopgto || '', ccpgto: l.ccpgto || '',
-        });
+        setForm({ gestor: l.gestor || '', solnum: l.solnum || '', soldate: l.soldate || '', supplier: l.supplier || '', nf: l.nf || '', emission: l.emission || '', due: l.due || '', desc: l.desc || '', cat: l.cat || '', value: l.value || '', tipopgto: l.tipopgto || '', ccpgto: l.ccpgto || '' });
         setAttachments(l.attachments || []);
       }
     } else {
       setForm({ gestor: '', solnum: '', soldate: todayISO(), supplier: '', nf: '', emission: '', due: '', desc: '', cat: '', value: '', tipopgto: '', ccpgto: '' });
       setAttachments([]);
     }
-  }, [open, editId]); // <-- dependências corretas
+  }, [open, editId]); // eslint-disable-line
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  async function addAttachments(files) {
+    for (const file of files) {
+      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      setAttachments(a => [...a.filter(x => x.name !== file.name), { name: file.name, type: file.type, data }]);
+    }
+  }
 
   function handleSave() {
     const errs = validateLancamento(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
-
-    const obj = {
-      id: editId || Date.now(),
-      gestor: form.gestor, solnum: form.solnum, soldate: form.soldate,
-      supplier: form.supplier, nf: form.nf, emission: form.emission,
-      due: form.due, desc: form.desc, cat: form.cat,
-      value: parseFloat(form.value), tipopgto: form.tipopgto, ccpgto: form.ccpgto,
-      rateio: [], tvo: null, conting: null, attachments,
-    };
+    const obj = { id: editId || Date.now(), gestor: form.gestor, solnum: form.solnum, soldate: form.soldate, supplier: form.supplier, nf: form.nf, emission: form.emission, due: form.due, desc: form.desc, cat: form.cat, value: parseFloat(form.value), tipopgto: form.tipopgto, ccpgto: form.ccpgto, rateio: [], tvo: null, conting: null, attachments };
     if (editId) dispatch({ type: 'UPDATE_LANC', payload: obj });
     else dispatch({ type: 'ADD_LANC', payload: obj });
     onClose?.();
@@ -216,116 +161,68 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
 
   return (
     <Modal open={open} onClose={onClose} title={readOnly ? 'Visualizar lançamento' : editId ? 'Editar lançamento' : 'Novo lançamento'} wide>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {[
-          { k: 'gestor', label: 'Gestor', type: 'select', opts: state.gestores },
-          { k: 'solnum', label: 'Nº Solic.' },
-          { k: 'soldate', label: 'Data Solic.', type: 'date' },
-          { k: 'supplier', label: 'Fornecedor', req: true },
-          { k: 'nf', label: 'Nota Fiscal' },
-          { k: 'emission', label: 'Emissão', type: 'date' },
-          { k: 'due', label: 'Vencimento', type: 'date' },
-          { k: 'cat', label: 'Cat. Despesa', type: 'select', opts: state.catDespesas.length ? state.catDespesas : state.cats },
-          { k: 'value', label: 'Valor (R$)', type: 'number', req: true },
-          { k: 'tipopgto', label: 'Tipo Pagamento', type: 'select', opts: ['Boleto', 'Transferência', 'Cartão', 'Dinheiro', 'PIX', 'Cheque'] },
-        ].map(({ k, label, type, req, opts }) => (
-          <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{label}{req && <span style={{ color: 'var(--danger)' }}> *</span>}</label>
-            {opts ? (
-              <select value={form[k]} onChange={e => setF(k, e.target.value)} className={errors[k] ? 'field-error' : ''} disabled={readOnly}>
-                <option value="">Selecione...</option>
-                {opts.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            ) : (
-              <input
-                type={type || 'text'} value={form[k]}
-                onChange={e => setF(k, e.target.value)}
-                className={errors[k] ? 'field-error' : ''}
-                disabled={readOnly}
-                style={{
-                  background: readOnly ? 'var(--surface2)' : '#fff',
-                  color: readOnly ? '#777' : '#333'
-                }}
-              />
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '1.25rem', marginTop: '-0.5rem' }}>
+        {[['form', 'Formulário'], ['attach', 'Anexos']].map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 18px', fontSize: 14, fontFamily: 'inherit', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', borderBottom: tab === t ? '2px solid var(--nav-orange)' : '2px solid transparent', color: tab === t ? 'var(--nav-orange)' : 'var(--text3)', marginBottom: -2, transition: 'all 0.15s' }}>
+            {label}
+            {t === 'attach' && attachments.length > 0 && (
+              <span style={{ marginLeft: 6, fontSize: 11, background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '1px 5px' }}>{attachments.length}</span>
             )}
-          </div>
+          </button>
         ))}
-
-        {/* CC Pgto com busca */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>CC Pgto</label>
-          {readOnly ? (
-            <input value={form.ccpgto} disabled style={{ background: 'var(--surface2)', color: '#777' }}/>
-          ) : (
-            <CCSelect value={form.ccpgto} onChange={v => setF('ccpgto', v)} bases={activeBases}/>
-          )}
-        </div>
-
-        {/* Descrição */}
-        <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
-          <textarea
-            value={form.desc} onChange={e => setF('desc', e.target.value)}
-            rows={2} disabled={readOnly}
-            style={{
-              resize: 'vertical',
-              background: readOnly ? 'var(--surface2)' : '#fff',
-              color: readOnly ? '#777' : '#333'
-            }}
-          />
-        </div>
       </div>
 
-      {/* Anexos */}
-      <div style={{ marginTop: '1rem' }}>
-        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>
-          Anexos {attachments.length > 0 && <span style={{ background: '#d97757', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11, marginLeft: 4 }}>{attachments.length}</span>}
-        </label>
-        {!readOnly && (
-          <div
-            onClick={() => fileRef.current?.click()}
-            style={{ border: '1.5px dashed var(--border2)', borderRadius: 8, padding: '12px', textAlign: 'center', cursor: 'pointer', fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}
-          >
-            Clique aqui ou arraste para anexar arquivos
-            <div style={{ fontSize: 11, marginTop: 2 }}>PDF, imagem</div>
-          </div>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept=".pdf,image/*"
-          style={{ display: 'none' }}
-          onChange={e => {
-            const files = Array.from(e.target.files || []);
-            files.forEach(file => {
-              const reader = new FileReader();
-              reader.onload = ev => {
-                setAttachments(prev => [...prev, { name: file.name, type: file.type, data: ev.target.result }]);
-              };
-              reader.readAsDataURL(file);
-            });
-            e.target.value = '';
-          }}
-        />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {attachments.map((att, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 12 }}>
-              <span
-                onClick={() => window.open(att.data, '_blank')}
-                style={{ cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-              >{att.name}</span>
-              {!readOnly && (
-                <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, padding: 0 }}>✕</button>
+      {/* Aba Formulário */}
+      {tab === 'form' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {[
+            { k: 'gestor', label: 'Gestor', type: 'select', opts: state.gestores },
+            { k: 'solnum', label: 'Nº Solic.' },
+            { k: 'soldate', label: 'Data Solic.', type: 'date' },
+            { k: 'supplier', label: 'Fornecedor', req: true },
+            { k: 'nf', label: 'Nota Fiscal' },
+            { k: 'emission', label: 'Emissão', type: 'date' },
+            { k: 'due', label: 'Vencimento', type: 'date' },
+            { k: 'cat', label: 'Cat. Despesa', type: 'select', opts: state.catDespesas.length ? state.catDespesas : state.cats },
+            { k: 'value', label: 'Valor (R$)', type: 'number', req: true },
+            { k: 'tipopgto', label: 'Tipo Pagamento', type: 'select', opts: ['Boleto', 'Transferência', 'Cartão', 'Dinheiro', 'PIX', 'Cheque'] },
+          ].map(({ k, label, type, req, opts }) => (
+            <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{label}{req && <span style={{ color: 'var(--danger)' }}> *</span>}</label>
+              {opts ? (
+                <select value={form[k]} onChange={e => setF(k, e.target.value)} className={errors[k] ? 'field-error' : ''} disabled={readOnly}>
+                  <option value="">Selecione...</option>
+                  {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input type={type || 'text'} value={form[k]} onChange={e => setF(k, e.target.value)} className={errors[k] ? 'field-error' : ''} disabled={readOnly} style={{ background: readOnly ? 'var(--surface2)' : '#fff', color: readOnly ? '#777' : '#333' }}/>
               )}
             </div>
           ))}
-          {attachments.length === 0 && readOnly && (
-            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Nenhum anexo</span>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>CC Pgto</label>
+            {readOnly ? <input value={form.ccpgto} disabled style={{ background: 'var(--surface2)', color: '#777' }}/> : <CCSelect value={form.ccpgto} onChange={v => setF('ccpgto', v)} bases={activeBases}/>}
+          </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
+            <textarea value={form.desc} onChange={e => setF('desc', e.target.value)} rows={2} disabled={readOnly} style={{ resize: 'vertical', background: readOnly ? 'var(--surface2)' : '#fff', color: readOnly ? '#777' : '#333' }}/>
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* Aba Anexos */}
+      {tab === 'attach' && (
+        <AttachmentTab
+          attachments={attachments}
+          setAttachments={readOnly ? () => {} : setAttachments}
+          onAddFiles={readOnly ? () => {} : addAttachments}
+          onPreview={setPreviewAtt}
+          fileRef={fileRef}
+        />
+      )}
+
+      {/* Footer */}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
         <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
           {readOnly ? 'Fechar' : 'Cancelar'}
@@ -336,6 +233,25 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
           </button>
         )}
       </div>
+
+      {/* Preview modal */}
+      {previewAtt && (
+        <div onClick={() => setPreviewAtt(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg)', borderRadius: 16, padding: 20, width: '90vw', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{previewAtt.name}</span>
+              <button onClick={() => setPreviewAtt(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text3)' }}>✕</button>
+            </div>
+            {previewAtt.data?.startsWith('data:image') ? (
+              <img src={previewAtt.data} alt={previewAtt.name} style={{ width: '100%', borderRadius: 8, objectFit: 'contain', maxHeight: '70vh' }}/>
+            ) : previewAtt.data?.startsWith('data:application/pdf') ? (
+              <iframe src={previewAtt.data} style={{ width: '100%', height: '70vh', border: 'none', borderRadius: 8 }} title="preview"/>
+            ) : (
+              <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 13, padding: 40 }}>Prévia não disponível.</div>
+            )}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -358,10 +274,8 @@ export default function LancamentosPage() {
   const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const { lancamentos, gestores, bases } = state;
-
-  const years    = [...new Set(lancamentos.map(l => l.soldate?.slice(0, 4)).filter(Boolean))].sort();
-  const months   = [...new Set(lancamentos.filter(l => !yearF || l.soldate?.slice(0, 4) === yearF).map(l => l.soldate?.slice(5, 7)).filter(Boolean))].sort();
-  const suppliers = [...new Set(lancamentos.map(l => l.supplier).filter(Boolean))].sort();
+  const years  = [...new Set(lancamentos.map(l => l.soldate?.slice(0, 4)).filter(Boolean))].sort();
+  const months = [...new Set(lancamentos.filter(l => !yearF || l.soldate?.slice(0, 4) === yearF).map(l => l.soldate?.slice(5, 7)).filter(Boolean))].sort();
 
   let list = [...lancamentos];
   if (yearF)     list = list.filter(l => l.soldate?.slice(0, 4) === yearF);
@@ -371,24 +285,12 @@ export default function LancamentosPage() {
   if (ccF)       list = list.filter(l => l.ccpgto === ccF);
   if (search)    list = list.filter(l => JSON.stringify(l).toLowerCase().includes(search.toLowerCase()));
 
-  function toggleSelect(id) {
-    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  }
-  function toggleAll(checked) {
-    setSelected(checked ? new Set(list.map(l => l.id)) : new Set());
-  }
+  function toggleSelect(id) { setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll(checked) { setSelected(checked ? new Set(list.map(l => l.id)) : new Set()); }
 
   function deleteSelected() {
     if (!selected.size) return;
-    setConfirmCfg({
-      isOpen: true,
-      message: `Excluir ${selected.size} lançamento(s)?`,
-      onConfirm: () => {
-        dispatch({ type: 'DELETE_LANCS', payload: selected });
-        setBulkMode(false);
-        setSelected(new Set());
-      }
-    });
+    setConfirmCfg({ isOpen: true, message: `Excluir ${selected.size} lançamento(s)?`, onConfirm: () => { dispatch({ type: 'DELETE_LANCS', payload: selected }); setBulkMode(false); setSelected(new Set()); } });
   }
 
   async function importExcel(e) {
@@ -412,21 +314,12 @@ export default function LancamentosPage() {
         const supplier = String(get('supplier') || '');
         const value = parseMoneyValue(get('value'));
         if (!supplier && !value) continue;
-        dispatch({ type: 'ADD_LANC', payload: {
-          id: Date.now() + r, gestor: String(get('gestor') || ''), solnum: String(get('solnum') || ''),
-          soldate: parseExcelDate(get('soldate')), supplier, nf: String(get('nf') || ''),
-          emission: parseExcelDate(get('emission')), due: parseExcelDate(get('due')),
-          desc: String(get('desc') || ''), produto: String(get('produto') || ''),
-          cat: String(get('cat') || ''), value, tipopgto: String(get('tipopgto') || ''),
-          ccpgto: String(get('ccpgto') || ''), rateio: [], tvo: null, conting: null, attachments: [],
-        }});
+        dispatch({ type: 'ADD_LANC', payload: { id: Date.now() + r, gestor: String(get('gestor') || ''), solnum: String(get('solnum') || ''), soldate: parseExcelDate(get('soldate')), supplier, nf: String(get('nf') || ''), emission: parseExcelDate(get('emission')), due: parseExcelDate(get('due')), desc: String(get('desc') || ''), produto: String(get('produto') || ''), cat: String(get('cat') || ''), value, tipopgto: String(get('tipopgto') || ''), ccpgto: String(get('ccpgto') || ''), rateio: [], tvo: null, conting: null, attachments: [] }});
         added++;
       }
       setImportMsg(`✓ ${added} lançamento(s) importado(s)!`);
       setTimeout(() => setImportMsg(''), 4000);
-    } catch(err) {
-      setImportMsg('Erro: ' + err.message);
-    }
+    } catch(err) { setImportMsg('Erro: ' + err.message); }
     e.target.value = '';
   }
 
@@ -444,32 +337,15 @@ export default function LancamentosPage() {
 
   async function handleExport() {
     await loadSheetJS();
-    const rows = list.map(l => ({
-      'Gestor': l.gestor || '',
-      'Nº Solicitação': l.solnum || '',
-      'Data Solic.': l.soldate || '',
-      'Fornecedor': l.supplier || '',
-      'NF': l.nf || '',
-      'Emissão': l.emission || '',
-      'Vencimento': l.due || '',
-      'Descrição': l.desc || '',
-      'Categoria': l.cat || '',
-      'Valor': l.value || 0,
-      'Tipo Pgto': l.tipopgto || '',
-      'CC Pgto': l.ccpgto || '',
-      'Observações': l.obs || '',
-    }));
+    const rows = list.map(l => ({ 'Gestor': l.gestor || '', 'Nº Solicitação': l.solnum || '', 'Data Solic.': l.soldate || '', 'Fornecedor': l.supplier || '', 'NF': l.nf || '', 'Emissão': l.emission || '', 'Vencimento': l.due || '', 'Descrição': l.desc || '', 'Categoria': l.cat || '', 'Valor': l.value || 0, 'Tipo Pgto': l.tipopgto || '', 'CC Pgto': l.ccpgto || '', 'Observações': l.obs || '' }));
     const ws = window.XLSX.utils.json_to_sheet(rows);
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
-    const mes = monthF ? `-${monthF}` : '';
-    const ano = yearF ? `-${yearF}` : '';
-    window.XLSX.writeFile(wb, `lancamentos${ano}${mes}.xlsx`);
+    window.XLSX.writeFile(wb, `lancamentos${yearF ? `-${yearF}` : ''}${monthF ? `-${monthF}` : ''}.xlsx`);
   }
 
   return (
     <div>
-      {/* Header */}
       <div style={{ position: 'relative', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: '1.5rem' }}>
         <div>
           <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px', lineHeight: 1.2 }}>Lançamentos</div>
@@ -477,41 +353,21 @@ export default function LancamentosPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <ImportBtn importRef={importRef} importExcel={importExcel}/>
-          <button
-            onClick={handleExport}
-            style={{
-              padding: '10px 20px', borderRadius: 10,
-              border: '1.5px solid var(--accent)', background: 'transparent',
-              color: 'var(--accent)', fontFamily: 'Poppins, sans-serif',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            ↓ Exportar Excel
-          </button>
+          <button onClick={handleExport} style={{ padding: '10px 20px', borderRadius: 10, border: '1.5px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontFamily: 'Poppins, sans-serif', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>↓ Exportar Excel</button>
           <NewBtn onClick={() => { setEditId(null); setIsReadOnly(false); setModalOpen(true); }}/>
         </div>
         {importMsg && <div style={{ width: '100%', fontSize: 12, color: importMsg.startsWith('✓') ? 'var(--accent)' : 'var(--danger)' }}>{importMsg}</div>}
       </div>
 
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '0.5rem', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>Ano:</span>
-        <select value={yearF} onChange={e => setYearF(e.target.value)} style={selStyle}>
-          <option value="">Todos</option>{years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
+        <select value={yearF} onChange={e => setYearF(e.target.value)} style={selStyle}><option value="">Todos</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>Mês:</span>
-        <select value={monthF} onChange={e => setMonthF(e.target.value)} style={selStyle}>
-          <option value="">Todos</option>{months.map(m => <option key={m} value={m}>{MONTH_NAMES[parseInt(m)-1]}</option>)}
-        </select>
+        <select value={monthF} onChange={e => setMonthF(e.target.value)} style={selStyle}><option value="">Todos</option>{months.map(m => <option key={m} value={m}>{MONTH_NAMES[parseInt(m)-1]}</option>)}</select>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>Gestor:</span>
-        <select value={gestorF} onChange={e => setGestorF(e.target.value)} style={selStyle}>
-          <option value="">Todos</option>{gestores.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
+        <select value={gestorF} onChange={e => setGestorF(e.target.value)} style={selStyle}><option value="">Todos</option>{gestores.map(g => <option key={g} value={g}>{g}</option>)}</select>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>CC:</span>
-        <select value={ccF} onChange={e => setCcF(e.target.value)} style={selStyle}>
-          <option value="">Todos</option>{bases.map(b => <option key={b.nome} value={b.nome}>{b.nome}</option>)}
-        </select>
+        <select value={ccF} onChange={e => setCcF(e.target.value)} style={selStyle}><option value="">Todos</option>{bases.map(b => <option key={b.nome} value={b.nome}>{b.nome}</option>)}</select>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.5rem', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>Busca:</span>
@@ -519,17 +375,16 @@ export default function LancamentosPage() {
         <button onClick={() => { setYearF(''); setMonthF(''); setGestorF(''); setSupplierF(''); setCcF(''); setSearch(''); }} style={{ padding: '5px 11px', fontSize: 12, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit' }}>Limpar filtros</button>
       </div>
 
-      {/* Bulk header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
         {!bulkMode ? (
-          <button onClick={() => { setBulkMode(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'inherit' }}>
+          <button onClick={() => setBulkMode(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'inherit' }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
             Selecionar para excluir
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text2)' }}>
-              <input type="checkbox" onChange={e => toggleAll(e.target.checked)} style={{ width: 15, height: 15, accentColor: 'var(--accent)', padding: 0, border: 'none' }}/>
+              <input type="checkbox" onChange={e => toggleAll(e.target.checked)} style={{ width: 15, height: 15, accentColor: 'var(--accent)' }}/>
               Selecionar tudo
             </label>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--warning)' }}>{selected.size} selecionado{selected.size !== 1 ? 's' : ''}</span>
@@ -539,7 +394,6 @@ export default function LancamentosPage() {
         )}
       </div>
 
-      {/* Table */}
       <div style={{ border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)', marginBottom: '1.5rem' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="orcamento-table" style={{ minWidth: 1100 }}>
@@ -553,24 +407,12 @@ export default function LancamentosPage() {
               </tr>
             </thead>
             <tbody>
-              {list.length === 0 && (
-                <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: '#777777', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>Nenhum lançamento encontrado</td></tr>
-              )}
+              {list.length === 0 && <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: '#777777', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>Nenhum lançamento encontrado</td></tr>}
               {list.map((l, idx) => (
-                <LancRow
-                  key={l.id}
-                  l={l}
-                  idx={idx}
-                  bulkMode={bulkMode}
-                  selected={selected}
-                  toggleSelect={toggleSelect}
+                <LancRow key={l.id} l={l} idx={idx} bulkMode={bulkMode} selected={selected} toggleSelect={toggleSelect}
                   onView={() => { setEditId(l.id); setIsReadOnly(true); setModalOpen(true); }}
                   onEdit={() => { setEditId(l.id); setIsReadOnly(false); setModalOpen(true); }}
-                  onDelete={() => setConfirmCfg({
-                    isOpen: true,
-                    message: 'Excluir este lançamento?',
-                    onConfirm: () => dispatch({ type: 'DELETE_LANC', payload: l.id })
-                  })}
+                  onDelete={() => setConfirmCfg({ isOpen: true, message: 'Excluir este lançamento?', onConfirm: () => dispatch({ type: 'DELETE_LANC', payload: l.id }) })}
                 />
               ))}
             </tbody>
@@ -579,13 +421,7 @@ export default function LancamentosPage() {
       </div>
 
       <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly}/>
-
-      <ConfirmModal
-        isOpen={confirmCfg.isOpen}
-        message={confirmCfg.message}
-        onConfirm={confirmCfg.onConfirm}
-        onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
-      />
+      <ConfirmModal isOpen={confirmCfg.isOpen} message={confirmCfg.message} onConfirm={confirmCfg.onConfirm} onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}/>
     </div>
   );
 }
