@@ -169,14 +169,15 @@ export function AppProvider({ children }) {
 
   // ── Sync para Supabase após mutações de dados ─────────────────────────────
   // Observa apenas os arrays de dados, não o estado inteiro, evitando loop
-  useEffect(() => {
+ useEffect(() => {
     if (!state.loaded) return;
     if (!state.dbOnline) return;
     if (!currentUid.current) return;
+    if (!state.lastLocalEdit) return; // só sincroniza se houve edição local
 
     clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(() => syncToRemote(state, dispatch, isSyncing), 800);
-  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
     state.bills, state.tvoBills, state.lancamentos, state.tvoRegistros,
     state.bases, state.cats, state.catDespesas, state.gestores, state.orcamentos,
   ]);
