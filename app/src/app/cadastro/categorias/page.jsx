@@ -36,7 +36,7 @@ export default function CategoriasPage() {
                 onClick={() => setConfirmCfg({
                   isOpen: true,
                   message: `Remover "${c}"?`,
-                  onConfirm: () => dispatch({ type: 'REMOVE_CAT', idx: i }),
+                  onConfirm: () => dispatch({ type: 'REMOVE_CAT', name: c }),
                 })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}
               >✕</button>
