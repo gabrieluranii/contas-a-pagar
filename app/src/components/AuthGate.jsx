@@ -19,7 +19,6 @@ export default function AuthGate({ children }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -44,21 +43,11 @@ export default function AuthGate({ children }) {
     setErrorMsg('');
     setLoading(true);
 
-    let error = null;
-    if (mode === 'signup') {
-      const { error: signUpErr } = await sb.auth.signUp({ email, password });
-      error = signUpErr;
-      if (!error) setErrorMsg('Verifique seu email para confirmar a conta.');
-    } else {
-      const { error: signInErr } = await sb.auth.signInWithPassword({ email, password });
-      error = signInErr;
-      if (!error) {
-        router.push('/');
-      }
-    }
-
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
       setErrorMsg(error.message);
+    } else {
+      router.push('/');
     }
     setLoading(false);
   };
@@ -69,11 +58,11 @@ export default function AuthGate({ children }) {
   if (!session) {
     return (
       <div style={{
-        position: 'fixed', 
-        inset: 0, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 9999,
         backgroundImage: "url('https://replicate.delivery/xpbkg/O5K8n6N6sNfA5O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0/output.png')",
         backgroundSize: 'cover',
@@ -87,13 +76,13 @@ export default function AuthGate({ children }) {
           boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
         }}>
           <h2 style={{ margin: '0 0 1.5rem', fontFamily: 'Poppins, sans-serif', color: THEME.text, textAlign: 'center' }}>
-            {mode === 'login' ? 'Entrar no Sistema' : 'Criar Conta'}
+            Entrar no Sistema
           </h2>
-          
+
           <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: THEME.textSec }}>E-mail</label>
-              <input 
+              <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 style={{
                   padding: '10px 12px', border: `1px solid ${THEME.border}`, borderRadius: 6,
@@ -103,7 +92,7 @@ export default function AuthGate({ children }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: THEME.textSec }}>Senha</label>
-              <input 
+              <input
                 type="password" required value={password} onChange={e => setPassword(e.target.value)}
                 style={{
                   padding: '10px 12px', border: `1px solid ${THEME.border}`, borderRadius: 6,
@@ -123,17 +112,9 @@ export default function AuthGate({ children }) {
               padding: '10px', fontSize: 14, fontWeight: 600, marginTop: '0.5rem', cursor: 'pointer',
               opacity: loading ? 0.7 : 1
             }}>
-              {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Registrar'}
+              {loading ? 'Aguarde...' : 'Entrar'}
             </button>
           </form>
-
-          <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: 13, color: THEME.textSec }}>
-            {mode === 'login' ? (
-              <>Não tem uma conta? <button type="button" onClick={() => { setMode('signup'); setErrorMsg(''); }} style={{ background:'none', border:'none', color:THEME.accent, cursor:'pointer', fontWeight:600, padding:0 }}>Cadastre-se</button></>
-            ) : (
-              <>Já tem uma conta? <button type="button" onClick={() => { setMode('login'); setErrorMsg(''); }} style={{ background:'none', border:'none', color:THEME.accent, cursor:'pointer', fontWeight:600, padding:0 }}>Entrar</button></>
-            )}
-          </div>
         </div>
       </div>
     );
