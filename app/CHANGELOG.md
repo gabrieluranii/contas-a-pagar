@@ -9,6 +9,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-04-23
+
+### Security
+- C1: Removido UUID real de usuário do `supabase_rls_migration.sql` (substituído por placeholder). Ver `SECURITY_GIT_HISTORY_CLEANUP.md` para limpeza do histórico.
+- C2: Rota `/api/ocr` agora exige sessão Supabase autenticada e aplica rate limit (20 req / 10 min por usuário). Mime type validado contra allowlist (pdf, jpeg, png, webp), tamanho máx 5 MB.
+- C5: Signup público removido do `AuthGate`. Contas novas criadas manualmente via dashboard Supabase.
+
+### Fixed
+- C4: Criado `postcss.config.mjs` (estava ausente, quebrando build de produção).
+
 ## [1.3.9] - 2026-04-04
 
 ### Changed

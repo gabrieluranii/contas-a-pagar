@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const EXTRACTION_PROMPT = `Você é um especialista em documentos fiscais brasileiros. Analise o documento e extraia os dados retornando EXATAMENTE e APENAS um JSON válido, sem Markdown, sem backticks, sem texto extra.
 
@@ -20,20 +22,47 @@ Campos a extrair:
 
 Retorne APENAS o JSON, nada mais.`;
 
+const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+const MAX_BASE64_LENGTH = 7 * 1024 * 1024; // ~5.25 MB binário
+
 export async function POST(req) {
   try {
+    // 1. Auth
+    const supabase = await getServerSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    // 2. Rate limit
+    const rl = checkRateLimit(`ocr:${user.id}`);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      );
+    }
+
+    // 3. Validação
     const { mimeType, base64Data } = await req.json();
 
     if (!mimeType || !base64Data) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
+    if (!ALLOWED_MIME.includes(mimeType)) {
+      return NextResponse.json(
+        { error: `Tipo de arquivo não suportado. Permitidos: ${ALLOWED_MIME.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    if (typeof base64Data !== 'string' || base64Data.length > MAX_BASE64_LENGTH) {
+      return NextResponse.json({ error: 'Arquivo muito grande (máx 5 MB).' }, { status: 413 });
+    }
 
+    // 4. Groq
     const key = process.env.GROQ_API_KEY;
     if (!key) {
-      return NextResponse.json(
-        { error: 'Chave do Groq não configurada no servidor.' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Chave do Groq não configurada.' }, { status: 500 });
     }
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -44,30 +73,20 @@ export async function POST(req) {
       },
       body: JSON.stringify({
         model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Data}`,
-                },
-              },
-              {
-                type: 'text',
-                text: EXTRACTION_PROMPT,
-              },
-            ],
-          },
-        ],
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
+            { type: 'text', text: EXTRACTION_PROMPT },
+          ],
+        }],
         temperature: 0,
         max_tokens: 1024,
       }),
     });
 
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       return NextResponse.json(
         { error: err.error?.message || 'Falha na API do Groq' },
         { status: res.status }
@@ -83,6 +102,9 @@ export async function POST(req) {
 
   } catch (error) {
     console.error('Erro na rota OCR:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno do servidor' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Erro interno do servidor' },
+      { status: 500 }
+    );
   }
 }

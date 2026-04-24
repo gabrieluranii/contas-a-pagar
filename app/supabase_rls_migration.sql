@@ -17,15 +17,15 @@ ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.use
 -- Execute este bloco DEPOIS de substituir o placeholder e ANTES de ativar RLS
 -- =======================================================================================
 
-UPDATE bills SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE tvo_bills SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE lancamentos SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE tvo_registros SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE bases SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE categories SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE gestores SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE cat_despesas SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
-UPDATE orcamentos SET user_id = 'a1d13768-7ff4-4bdb-b9d2-675cdc05e5c4' WHERE user_id IS NULL;
+UPDATE bills SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE tvo_bills SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE lancamentos SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE tvo_registros SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE bases SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE categories SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE gestores SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE cat_despesas SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
+UPDATE orcamentos SET user_id = '<SEU-UUID-AQUI>' WHERE user_id IS NULL;
 
 -- OPCIONAL (MAS RECOMENDADO): Forçar constraints de NOT NULL agora que tudo tem user_id
 ALTER TABLE bills ALTER COLUMN user_id SET NOT NULL;
