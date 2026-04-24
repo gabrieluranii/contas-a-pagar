@@ -21,7 +21,7 @@ function CcModal({ open, onClose, editIdx }) {
       nome: form.nome, gestor: form.gestor, data: form.data,
       mes: form.mes, desmobilizado: isEdit ? base.desmobilizado : false,
     };
-    if (isEdit) dispatch({ type: 'UPDATE_BASE', idx: editIdx, payload: obj });
+    if (isEdit) dispatch({ type: 'UPDATE_BASE', payload: obj });
     else {
       if (state.bases.find(b => b.nome === form.nome)) { alert('Já existe um centro de custo com esse nome.'); return; }
       dispatch({ type: 'ADD_BASE', payload: obj });
@@ -104,13 +104,13 @@ export default function CcPage() {
     setConfirmCfg({
       isOpen: true,
       message: `Remover "${bases[idx].nome}"?`,
-      onConfirm: () => dispatch({ type: 'DELETE_BASE', idx })
+      onConfirm: () => dispatch({ type: 'DELETE_BASE', id: bases[idx].id })
     });
   }
 
   function toggleDesmob(idx) {
     const b = bases[idx];
-    dispatch({ type: 'UPDATE_BASE', idx, payload: { ...b, desmobilizado: !b.desmobilizado } });
+    dispatch({ type: 'UPDATE_BASE', payload: { ...b, desmobilizado: !b.desmobilizado } });
   }
 
   return (

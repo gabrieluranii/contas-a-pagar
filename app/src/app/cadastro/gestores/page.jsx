@@ -23,7 +23,7 @@ export default function GestoresPage() {
                 isOpen: true,
                 message: `Remover "${g}"?`,
                 onConfirm: () => {
-                  dispatch({ type: 'REMOVE_GESTOR', idx: i });
+                  dispatch({ type: 'REMOVE_GESTOR', name: g });
                   setConfirmCfg(prev => ({ ...prev, isOpen: false }));
                 }
               })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>

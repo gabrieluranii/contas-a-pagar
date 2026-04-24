@@ -22,7 +22,7 @@ export default function ProdutoPage() {
               <button onClick={() => setConfirmCfg({
                 isOpen: true,
                 message: `Remover "${c}"?`,
-                onConfirm: () => dispatch({ type: 'REMOVE_CAT', idx: i })
+                onConfirm: () => dispatch({ type: 'REMOVE_CAT', name: c })
               })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
             </div>
           )) : <span style={{ fontSize: 13, color: 'var(--text3)' }}>Nenhum produto cadastrado</span>}

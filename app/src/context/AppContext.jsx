@@ -62,9 +62,9 @@ function innerReducer(state, action) {
     case 'ADD_BASE':
       return { ...state, bases: [...state.bases, action.payload] };
     case 'UPDATE_BASE':
-      return { ...state, bases: state.bases.map((b, i) => i === action.idx ? action.payload : b) };
+      return { ...state, bases: state.bases.map(b => b.id === action.payload.id ? action.payload : b) };
     case 'DELETE_BASE':
-      return { ...state, bases: state.bases.filter((_, i) => i !== action.idx) };
+      return { ...state, bases: state.bases.filter(b => b.id !== action.id) };
     case 'DELETE_BASES':
       return { ...state, bases: state.bases.filter(b => !action.payload.has(b.nome)) };
     case 'SET_BASES':
@@ -72,15 +72,15 @@ function innerReducer(state, action) {
     case 'ADD_CAT':
       return { ...state, cats: [...state.cats, action.payload] };
     case 'REMOVE_CAT':
-      return { ...state, cats: state.cats.filter((_, i) => i !== action.idx) };
+      return { ...state, cats: state.cats.filter(n => n !== action.name) };
     case 'ADD_GESTOR':
       return { ...state, gestores: [...state.gestores, action.payload] };
     case 'REMOVE_GESTOR':
-      return { ...state, gestores: state.gestores.filter((_, i) => i !== action.idx) };
+      return { ...state, gestores: state.gestores.filter(n => n !== action.name) };
     case 'ADD_CAT_DESPESA':
       return { ...state, catDespesas: [...state.catDespesas, action.payload] };
     case 'REMOVE_CAT_DESPESA':
-      return { ...state, catDespesas: state.catDespesas.filter((_, i) => i !== action.idx) };
+      return { ...state, catDespesas: state.catDespesas.filter(n => n !== action.name) };
     case 'UPSERT_ORCAMENTO': {
       const { base, cat, month, value } = action.payload;
       const existing = state.orcamentos.findIndex(o => o.base === base && o.cat === cat && o.month === month);
@@ -135,10 +135,16 @@ export function AppProvider({ children }) {
 
   // ── Carrega dados do Supabase para o usuário logado ───────────────────────
   async function loadForUser(uid) {
+    const previousUid = currentUid.current;
     currentUid.current = uid;
-    dispatch({ type: 'RESET_DATA' });
+
+    // Troca de usuário: limpa estado anterior para evitar leak entre contas
+    if (previousUid && previousUid !== uid) {
+      dispatch({ type: 'RESET_DATA' });
+    }
 
     if (!uid || !isSupabaseConfigured()) {
+      dispatch({ type: 'RESET_DATA' });
       dispatch({ type: 'SET', key: 'loaded', payload: true });
       return;
     }

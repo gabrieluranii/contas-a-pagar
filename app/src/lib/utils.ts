@@ -1,24 +1,28 @@
+import type { Bill } from '@/types';
+
 // ── FORMAT HELPERS ────────────────────────────────────────────────────────────
-export const fmt = (v) =>
+export const fmt = (v: number | string | null | undefined): string =>
   'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const fmtDate = (d) => {
+export const fmtDate = (d: string | null | undefined): string => {
   if (!d) return '—';
   const [y, m, day] = d.split('-');
   return `${day}/${m}/${y}`;
 };
 
 // ── OVERDUE & DAYS ────────────────────────────────────────────────────────────
-export const isOverdue = (due, status) =>
+export const isOverdue = (due: string, status: string): boolean =>
   status === 'pending' && new Date(due + 'T00:00:00') < new Date(new Date().toDateString());
 
-export const daysUntil = (due) =>
-  Math.ceil((new Date(due + 'T00:00:00') - new Date(new Date().toDateString())) / 86400000);
+export const daysUntil = (due: string): number =>
+  Math.ceil((new Date(due + 'T00:00:00').getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
 
 // ── URGENCY ───────────────────────────────────────────────────────────────────
 export const LAUNCH_DAYS = 7;
 
-export function urgencyStatus(b) {
+export type UrgencyStatus = 'paid' | 'overdue' | 'critical' | 'warning' | 'ok';
+
+export function urgencyStatus(b: Pick<Bill, 'status' | 'due'>): UrgencyStatus {
   if (b.status === 'paid') return 'paid';
   const days = daysUntil(b.due);
   if (days < 0) return 'overdue';
@@ -27,15 +31,17 @@ export function urgencyStatus(b) {
   return 'ok';
 }
 
-export function urgencyClass(b) {
+export function urgencyClass(b: Pick<Bill, 'status' | 'due'>): string {
   const st = urgencyStatus(b);
   if (st === 'critical' || st === 'overdue') return 'urgency-critical';
   if (st === 'warning') return 'urgency-warning';
   return '';
 }
 
-export function urgencyPillText(b) {
-  if (!b.due || isNaN(new Date(b.due + 'T00:00:00'))) return null;
+export type UrgencyPill = { label: string; type: string } | null;
+
+export function urgencyPillText(b: Pick<Bill, 'status' | 'due'>): UrgencyPill {
+  if (!b.due || isNaN(new Date(b.due + 'T00:00:00').getTime())) return null;
 
   const st = urgencyStatus(b);
   const daysLeft = daysUntil(b.due);
@@ -44,6 +50,7 @@ export function urgencyPillText(b) {
   const launchStr = launchDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
   if (st === 'paid') return null;
+  // Preservado do JS original: overdue retorna type: 'critical' (não 'overdue')
   if (st === 'overdue') return { label: 'Vencida', type: 'critical' };
   if (st === 'critical') {
     const d = daysLeft === 0 ? 'vence hoje' : daysLeft === 1 ? 'vence amanhã' : `${daysLeft}d p/ vencer`;
@@ -53,11 +60,11 @@ export function urgencyPillText(b) {
   return { label: `Lançar até ${launchStr}`, type: 'ok' };
 }
 
-export const billIcon = (b) =>
+export const billIcon = (b: Pick<Bill, 'status' | 'due'>): string =>
   b.status === 'paid' ? '✓' : isOverdue(b.due, b.status) ? '!' : '·';
 
 // ── EXCEL HELPERS ─────────────────────────────────────────────────────────────
-export function normalizeKey(str) {
+export function normalizeKey(str: string | null | undefined): string {
   return String(str || '')
     .toLowerCase()
     .trim()
@@ -67,10 +74,12 @@ export function normalizeKey(str) {
     .trim();
 }
 
-export function parseExcelDate(val) {
+export function parseExcelDate(val: unknown): string {
   if (!val && val !== 0) return '';
   if (val instanceof Date) {
-    const y = val.getFullYear(), mo = String(val.getMonth() + 1).padStart(2, '0'), dy = String(val.getDate()).padStart(2, '0');
+    const y = val.getFullYear();
+    const mo = String(val.getMonth() + 1).padStart(2, '0');
+    const dy = String(val.getDate()).padStart(2, '0');
     return `${y}-${mo}-${dy}`;
   }
   if (typeof val === 'string') {
@@ -82,13 +91,15 @@ export function parseExcelDate(val) {
   }
   if (typeof val === 'number' && val > 1000) {
     const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-    const y = d.getUTCFullYear(), mo = String(d.getUTCMonth() + 1).padStart(2, '0'), dy = String(d.getUTCDate()).padStart(2, '0');
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dy = String(d.getUTCDate()).padStart(2, '0');
     return `${y}-${mo}-${dy}`;
   }
   return '';
 }
 
-export function parseMoneyValue(v) {
+export function parseMoneyValue(v: unknown): number {
   if (typeof v === 'number') return v;
   const s = String(v || '0');
   const clean = s.replace(/[R$\s]/g, '');
@@ -100,8 +111,8 @@ export function parseMoneyValue(v) {
 // ── MONTH NAMES ───────────────────────────────────────────────────────────────
 export const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+] as const;
 
-export const todayISO = () => new Date().toISOString().slice(0, 10);
-export const thisMonthISO = () => new Date().toISOString().slice(0, 7);
+export const todayISO = (): string => new Date().toISOString().slice(0, 10);
+export const thisMonthISO = (): string => new Date().toISOString().slice(0, 7);
