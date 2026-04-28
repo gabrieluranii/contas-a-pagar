@@ -9,6 +9,11 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-04-29
+
+### Changed
+- Modal TVO/Contingência: removidos os campos "Centro de Custo" e "Origem" da UI. Colunas mantidas no banco para compat com import Excel.
+
 ## [1.9.2] - 2026-04-29
 
 ### Added
