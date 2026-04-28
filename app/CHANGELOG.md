@@ -9,6 +9,11 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-04-29
+
+### Added
+- Botão "+ Novo registro" em `/tvo` que abre o modal de lançamento TVO/Contingência.
+
 ## [1.9.1] - 2026-04-29
 
 ### Fixed

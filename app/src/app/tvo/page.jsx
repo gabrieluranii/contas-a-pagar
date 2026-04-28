@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, fmtDate } from '@/lib/utils';
+import { TvoRegModal } from './lista/page';
 
 export default function TvoPage() {
   const { state, dispatch } = useApp();
@@ -12,6 +13,7 @@ export default function TvoPage() {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
+  const [novoRegModalOpen, setNovoRegModalOpen] = useState(false);
 
   const { tvoBills, bases, cats } = state;
   const list = tvoBills.filter(b => tab === 'tvo' ? b.tvoStage === 'pending' : b.tvoStage === 'aguardando');
@@ -73,6 +75,16 @@ export default function TvoPage() {
           <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px', lineHeight: 1.2 }}>TVO e Contingência</div>
           <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#777777', marginTop: 4 }}>Lançamentos aguardando aprovação orçamentária</div>
         </div>
+        <button
+          onClick={() => setNovoRegModalOpen(true)}
+          style={{
+            padding: '9px 20px', fontSize: 14, fontFamily: 'inherit',
+            borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500,
+            background: 'var(--accent)', color: '#fff', border: 'none',
+          }}
+        >
+          + Novo registro
+        </button>
       </div>
 
       {/* ── Abas pill ── */}
@@ -220,6 +232,12 @@ export default function TvoPage() {
         message={confirmCfg.message}
         onConfirm={confirmCfg.onConfirm}
         onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <TvoRegModal
+        open={novoRegModalOpen}
+        onClose={() => setNovoRegModalOpen(false)}
+        editId={null}
       />
     </div>
   );

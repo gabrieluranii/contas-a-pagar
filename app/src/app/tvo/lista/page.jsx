@@ -5,7 +5,7 @@ import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { fmt, fmtDate, normalizeKey, parseExcelDate, parseMoneyValue, MONTH_NAMES, todayISO } from '@/lib/utils';
 
-function TvoRegModal({ open, onClose, editId }) {
+export function TvoRegModal({ open, onClose, editId }) {
   const { state, dispatch } = useApp();
   const [form, setForm] = useState({
     gestor: '', fluig: '', soldate: todayISO(), value: '',
