@@ -9,6 +9,11 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-04-29
+
+### Changed
+- Modal TVO/Contingência: removido o campo "Produto" da UI. Coluna mantida no banco.
+
 ## [1.9.3] - 2026-04-29
 
 ### Changed

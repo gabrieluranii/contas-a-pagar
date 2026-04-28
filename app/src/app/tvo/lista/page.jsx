@@ -93,7 +93,6 @@ export function TvoRegModal({ open, onClose, editId }) {
           { k:'cat',      label:'Categoria',       type:'select', opts: state.cats },
           { k:'gestor',   label:'Gestor',          type:'select', opts: state.gestores },
           { k:'soldate',  label:'Data Solic.',     type:'date' },
-          { k:'produto',  label:'Produto' },
         ].map(({ k, label, type, opts }) => (
           <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{label}</label>
