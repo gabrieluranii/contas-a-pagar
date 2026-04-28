@@ -459,12 +459,31 @@ const mapBaseFromDb = (r) => ({
 });
 
 const mapTvoRegToDb = (r, uid) => ({
-  id: r.id, user_id: uid, gestor: r.gestor || '', fluig: r.fluig || '', soldate: r.soldate || null,
-  value: r.value, tipo: r.tipo || 'TVO', produto: r.produto || '',
-  cc: r.cc || '', origem: r.origem || 'Manual',
+  id: r.id, user_id: uid,
+  gestor: r.gestor || '',
+  fluig: r.fluig || '',
+  soldate: r.soldate || null,
+  value: r.value,
+  tipo: r.tipo || 'TVO',
+  produto: r.produto || '',
+  cc: r.cc || '',
+  origem: r.origem || 'Manual',
+  base: r.base || '',
+  cat: r.cat || '',
+  obs: r.obs || '',
 });
 
 const mapTvoRegFromDb = (r) => ({
-  id: r.id, gestor: r.gestor, fluig: r.fluig, soldate: r.soldate,
-  value: r.value, tipo: r.tipo, produto: r.produto, cc: r.cc, origem: r.origem,
+  id: r.id,
+  gestor: r.gestor,
+  fluig: r.fluig,
+  soldate: r.soldate,
+  value: r.value,
+  tipo: r.tipo,
+  produto: r.produto,
+  cc: r.cc,
+  origem: r.origem,
+  base: r.base ?? '',
+  cat: r.cat ?? '',
+  obs: r.obs ?? '',
 });

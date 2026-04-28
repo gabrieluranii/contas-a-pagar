@@ -7,21 +7,48 @@ import { fmt, fmtDate, normalizeKey, parseExcelDate, parseMoneyValue, MONTH_NAME
 
 function TvoRegModal({ open, onClose, editId }) {
   const { state, dispatch } = useApp();
-  const [form, setForm] = useState({ gestor: '', fluig: '', soldate: todayISO(), value: '', tipo: 'TVO', produto: '', cc: '', origem: 'Manual' });
+  const [form, setForm] = useState({
+    gestor: '', fluig: '', soldate: todayISO(), value: '',
+    tipo: 'TVO', produto: '', cc: '', origem: 'Manual',
+    base: '', cat: '', obs: '',
+  });
 
   useState(() => {
     if (!open) return;
     if (editId) {
       const r = state.tvoRegistros.find(x => x.id === editId);
-      if (r) setForm({ gestor: r.gestor || '', fluig: r.fluig || '', soldate: r.soldate || todayISO(), value: r.value || '', tipo: r.tipo || 'TVO', produto: r.produto || '', cc: r.cc || '', origem: r.origem || 'Manual' });
+      if (r) setForm({
+        gestor: r.gestor || '', fluig: r.fluig || '',
+        soldate: r.soldate || todayISO(), value: r.value || '',
+        tipo: r.tipo || 'TVO', produto: r.produto || '',
+        cc: r.cc || '', origem: r.origem || 'Manual',
+        base: r.base || '', cat: r.cat || '', obs: r.obs || '',
+      });
     } else {
-      setForm({ gestor: '', fluig: '', soldate: todayISO(), value: '', tipo: 'TVO', produto: '', cc: '', origem: 'Manual' });
+      setForm({
+        gestor: '', fluig: '', soldate: todayISO(), value: '',
+        tipo: 'TVO', produto: '', cc: '', origem: 'Manual',
+        base: '', cat: '', obs: '',
+      });
     }
   });
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
   function handleSave() {
-    const obj = { id: editId || Date.now(), gestor: form.gestor, fluig: form.fluig, soldate: form.soldate, value: parseFloat(form.value) || 0, tipo: form.tipo, produto: form.produto, cc: form.cc, origem: form.origem };
+    const obj = {
+      id: editId || Date.now(),
+      gestor: form.gestor,
+      fluig: form.fluig,
+      soldate: form.soldate,
+      value: parseFloat(form.value) || 0,
+      tipo: form.tipo,
+      produto: form.produto,
+      cc: form.cc,
+      origem: form.origem,
+      base: form.base,
+      cat: form.cat,
+      obs: form.obs,
+    };
     if (editId) dispatch({ type: 'UPDATE_TVO_REG', payload: obj });
     else dispatch({ type: 'ADD_TVO_REG', payload: obj });
     onClose?.();
@@ -30,17 +57,45 @@ function TvoRegModal({ open, onClose, editId }) {
   const activeBases = state.bases.filter(b => !b.desmobilizado);
 
   return (
-    <Modal open={open} onClose={onClose} title={editId ? 'Editar registro' : 'Novo registro TVO/Contingência'}>
+    <Modal open={open} onClose={onClose} title={editId ? 'Editar lançamento' : 'Novo lançamento TVO/Contingência'}>
+      {/* Toggle TVO | Contingência */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: '1.25rem', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border2)', width: 'fit-content' }}>
+        {['TVO', 'Contingência'].map(opt => {
+          const active = form.tipo === opt;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setF('tipo', opt)}
+              style={{
+                padding: '8px 20px',
+                fontSize: 14,
+                fontFamily: 'inherit',
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: active ? 'var(--accent)' : 'transparent',
+                color: active ? '#fff' : 'var(--text2)',
+                border: 'none',
+                transition: 'background 0.15s',
+              }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {[
-          { k:'gestor', label:'Gestor', type:'select', opts: state.gestores },
-          { k:'fluig', label:'Nº Fluig' },
-          { k:'soldate', label:'Data Solic.', type:'date' },
-          { k:'value', label:'Valor (R$)', type:'number' },
-          { k:'tipo', label:'Tipo', type:'select', opts: ['TVO', 'Contingência'] },
-          { k:'produto', label:'Produto' },
-          { k:'cc', label:'Centro de Custo', type:'select', opts: activeBases.map(b => b.nome) },
-          { k:'origem', label:'Origem', type:'select', opts: ['Manual', 'Excel', 'Sistema'] },
+          { k:'fluig',    label:'Nº Fluig' },
+          { k:'value',    label:'Valor (R$)',     type:'number' },
+          { k:'base',     label:'Base',            type:'select', opts: activeBases.map(b => b.nome) },
+          { k:'cat',      label:'Categoria',       type:'select', opts: state.cats },
+          { k:'gestor',   label:'Gestor',          type:'select', opts: state.gestores },
+          { k:'soldate',  label:'Data Solic.',     type:'date' },
+          { k:'cc',       label:'Centro de Custo', type:'select', opts: activeBases.map(b => b.nome) },
+          { k:'produto',  label:'Produto' },
+          { k:'origem',   label:'Origem',          type:'select', opts: ['Manual', 'Excel', 'Sistema'] },
         ].map(({ k, label, type, opts }) => (
           <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{label}</label>
@@ -54,7 +109,19 @@ function TvoRegModal({ open, onClose, editId }) {
             )}
           </div>
         ))}
+
+        {/* Observação ocupa as 2 colunas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: '1 / -1' }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Observação</label>
+          <textarea
+            value={form.obs}
+            onChange={e => setF('obs', e.target.value)}
+            rows={3}
+            style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 14 }}
+          />
+        </div>
       </div>
+
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
         <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>Cancelar</button>
         <button onClick={handleSave} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'var(--accent)', color: '#fff', border: 'none' }}>Salvar</button>
@@ -68,6 +135,9 @@ const TVO_COL_MAP = {
   'data solic': 'soldate', 'data solicitacao': 'soldate',
   'valor': 'value', 'tipo': 'tipo', 'tvo/contingencia': 'tipo',
   'produto': 'produto', 'centro de custo': 'cc', 'cc': 'cc',
+  'base': 'base',
+  'categoria': 'cat', 'cat': 'cat',
+  'observacao': 'obs', 'observação': 'obs', 'obs': 'obs',
 };
 
 export default function TvoListaPage() {
@@ -118,10 +188,18 @@ export default function TvoListaPage() {
         if (row.every(v => v === '' || v == null)) continue;
         const get = f => fieldMap[f] !== undefined ? row[fieldMap[f]] : '';
         dispatch({ type: 'ADD_TVO_REG', payload: {
-          id: Date.now() + r, gestor: String(get('gestor') || ''), fluig: String(get('fluig') || ''),
-          soldate: parseExcelDate(get('soldate')), value: parseMoneyValue(get('value')),
-          tipo: String(get('tipo') || 'TVO'), produto: String(get('produto') || ''),
-          cc: String(get('cc') || ''), origem: 'Excel',
+          id: Date.now() + r,
+          gestor: String(get('gestor') || ''),
+          fluig: String(get('fluig') || ''),
+          soldate: parseExcelDate(get('soldate')),
+          value: parseMoneyValue(get('value')),
+          tipo: String(get('tipo') || 'TVO'),
+          produto: String(get('produto') || ''),
+          cc: String(get('cc') || ''),
+          origem: 'Excel',
+          base: String(get('base') || ''),
+          cat: String(get('cat') || ''),
+          obs: String(get('obs') || ''),
         }});
         added++;
       }
@@ -192,6 +270,7 @@ export default function TvoListaPage() {
                 <th style={thStyle}>Tipo</th>
                 <th style={thStyle}>Produto</th>
                 <th style={thStyle}>Centro de Custo</th>
+                <th style={thStyle}>Base</th>
                 <th style={thStyle}>Origem</th>
                 <th style={thStyle}></th>
               </tr>
@@ -210,6 +289,7 @@ export default function TvoListaPage() {
                   <td><span className={r.tipo === 'Contingência' ? 'pill-conting-tipo' : 'pill-tvo-tipo'} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 20 }}>{r.tipo}</span></td>
                   <td>{r.produto || '—'}</td>
                   <td>{r.cc || '—'}</td>
+                  <td>{r.base || '—'}</td>
                   <td><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 20, background: 'var(--surface2)', color: 'var(--text2)' }}>{r.origem || '—'}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>

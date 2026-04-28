@@ -9,6 +9,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-04-29
+
+### Added
+- Modal de lançamento TVO/Contingência em `/tvo/lista` agora aceita os campos `base`, `categoria` e `observação`.
+- Toggle visual de tipo (TVO | Contingência) no topo do modal.
+- Migration: 3 colunas novas em `tvo_registros` (base, cat, obs) com default `''`.
+- Import Excel reconhece colunas "base", "categoria" e "observação".
+- Coluna "Base" adicionada na listagem de registros TVO/Contingência.
+
 ## [1.8.1] - 2026-04-23
 
 ### Changed
