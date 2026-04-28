@@ -5,7 +5,8 @@ import {
   parseMoneyValue,
   urgencyStatus,
   normalizeKey,
-  LAUNCH_DAYS
+  LAUNCH_DAYS,
+  URGENT_DAYS
 } from '../utils';
 
 describe('utils.js', () => {
@@ -103,19 +104,28 @@ describe('utils.js', () => {
       expect(urgencyStatus({ status: 'pending', due: shiftDays(-10) })).toBe('overdue');
     });
 
-    it('retorna "critical" se faltam dias menores que o LAUNCH_DAYS e não venceu ontem', () => {
+    it('retorna "critical" se faltam menos de URGENT_DAYS (7) e não venceu', () => {
       expect(urgencyStatus({ status: 'pending', due: shiftDays(0) })).toBe('critical'); // hoje
-      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS - 1) })).toBe('critical');
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(URGENT_DAYS - 1) })).toBe('critical'); // 6 dias
     });
 
-    it('retorna "warning" se está próximo do limite além do LAUNCH_DAYS', () => {
-      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS) })).toBe('warning');
-      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS + 3) })).toBe('warning');
+    it('retorna "warning" se entre URGENT_DAYS e LAUNCH_DAYS (inclusive)', () => {
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(URGENT_DAYS) })).toBe('warning');  // 7 dias
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS) })).toBe('warning'); // 10 dias
     });
 
-    it('retorna "ok" se ainda há amplo prazo', () => {
-      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS + 4) })).toBe('ok');
+    it('retorna "ok" se além de LAUNCH_DAYS', () => {
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS + 1) })).toBe('ok'); // 11 dias
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(LAUNCH_DAYS + 3) })).toBe('ok'); // 13 dias — era warning, agora ok
       expect(urgencyStatus({ status: 'pending', due: shiftDays(30) })).toBe('ok');
+    });
+
+    it('pending + vence em 8 dias retorna warning (entre URGENT_DAYS e LAUNCH_DAYS)', () => {
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(8) })).toBe('warning');
+    });
+
+    it('pending + vence em 6 dias retorna critical (dentro de URGENT_DAYS)', () => {
+      expect(urgencyStatus({ status: 'pending', due: shiftDays(6) })).toBe('critical');
     });
   });
 

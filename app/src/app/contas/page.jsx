@@ -124,7 +124,7 @@ export default function ContasPage() {
           color={venceHoje > 0 ? 'red' : undefined}
         />
         <MetricCard
-          label="Próximos 7 dias"
+          label="Próximos 10 dias"
           value={proximos7}
           sub="lançamentos"
           color={proximos7 > 0 ? 'yellow' : undefined}

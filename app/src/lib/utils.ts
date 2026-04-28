@@ -18,7 +18,11 @@ export const daysUntil = (due: string): number =>
   Math.ceil((new Date(due + 'T00:00:00').getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
 
 // ── URGENCY ───────────────────────────────────────────────────────────────────
-export const LAUNCH_DAYS = 7;
+// Janela ideal: lançar com no mínimo 10 dias de antecedência.
+export const LAUNCH_DAYS = 10;
+
+// Alerta vermelho: dentro de 7 dias do vencimento é urgente.
+export const URGENT_DAYS = 7;
 
 export type UrgencyStatus = 'paid' | 'overdue' | 'critical' | 'warning' | 'ok';
 
@@ -26,9 +30,9 @@ export function urgencyStatus(b: Pick<Bill, 'status' | 'due'>): UrgencyStatus {
   if (b.status === 'paid') return 'paid';
   const days = daysUntil(b.due);
   if (days < 0) return 'overdue';
-  if (days < LAUNCH_DAYS) return 'critical';
-  if (days <= LAUNCH_DAYS + 3) return 'warning';
-  return 'ok';
+  if (days < URGENT_DAYS) return 'critical';   // <7 dias → vermelho urgente
+  if (days <= LAUNCH_DAYS) return 'warning';   // 7-10 dias → amarelo
+  return 'ok';                                  // >10 dias
 }
 
 export function urgencyClass(b: Pick<Bill, 'status' | 'due'>): string {
@@ -54,7 +58,7 @@ export function urgencyPillText(b: Pick<Bill, 'status' | 'due'>): UrgencyPill {
   if (st === 'overdue') return { label: 'Vencida', type: 'critical' };
   if (st === 'critical') {
     const d = daysLeft === 0 ? 'vence hoje' : daysLeft === 1 ? 'vence amanhã' : `${daysLeft}d p/ vencer`;
-    return { label: `⚠ Lançar agora (${d})`, type: 'critical' };
+    return { label: `⚠ URGENTE — lançar agora (${d})`, type: 'critical' };
   }
   if (st === 'warning') return { label: `Lançar até ${launchStr}`, type: 'warning' };
   return { label: `Lançar até ${launchStr}`, type: 'ok' };

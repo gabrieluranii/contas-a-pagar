@@ -9,6 +9,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-04-23
+
+### Changed
+- Janela mínima de lançamento ampliada de 7 para 10 dias antes do vencimento.
+- Alerta vermelho de urgência ("URGENTE") agora aparece quando faltam 7 dias ou menos.
+- Adicionada constante `URGENT_DAYS` em `lib/utils` para separar conceitos de "janela ideal" e "alerta crítico".
+- Card "Próximos 7 dias" renomeado para "Próximos 10 dias".
+
 ## [1.8.0] - 2026-04-23
 
 ### Performance
