@@ -125,7 +125,7 @@ const INITIAL = {
 };
 
 // ── CONTEXT ───────────────────────────────────────────────────────────────────
-const AppContext = createContext(null);
+export const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
@@ -189,7 +189,7 @@ export function AppProvider({ children }) {
   ]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, fetchBillAttachments, fetchLancamentoAttachments }}>
       {children}
     </AppContext.Provider>
   );
@@ -214,9 +214,9 @@ async function loadRemote(dispatch) {
   dispatch({ type: 'SET', key: 'syncError', payload: null });
   try {
     const results = await Promise.all([
-      sb.from('bills').select('*'),
+      sb.from('bills').select('id,user_id,supplier,value,emission,due,status,base,cat,nfnum,nfserie,fluig,fluig_value,obs,rateio,tvo,conting,created_at,updated_at'),
       sb.from('tvo_bills').select('*'),
-      sb.from('lancamentos').select('*'),
+      sb.from('lancamentos').select('id,user_id,origin_bill_id,gestor,solnum,soldate,supplier,nf,emission,due,descr,cat,value,tipopgto,ccpgto,obs,rateio,tvo,conting,origem_pagamento,created_at'),
       sb.from('tvo_registros').select('*'),
       sb.from('bases').select('*'),
       sb.from('categories').select('*'),
@@ -258,6 +258,35 @@ async function loadRemote(dispatch) {
     dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao carregar: ${e.message}` });
     dispatch({ type: 'SET', key: 'loaded', payload: true });
   }
+}
+
+// ── LAZY LOAD DE ANEXOS ───────────────────────────────────────────────────────
+async function fetchBillAttachments(billId) {
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('bills')
+    .select('attachments')
+    .eq('id', billId)
+    .single();
+  if (error) {
+    console.warn('Falha ao carregar anexos da bill:', error.message);
+    return [];
+  }
+  return data?.attachments ?? [];
+}
+
+async function fetchLancamentoAttachments(lancId) {
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('lancamentos')
+    .select('attachments')
+    .eq('id', lancId)
+    .single();
+  if (error) {
+    console.warn('Falha ao carregar anexos do lançamento:', error.message);
+    return [];
+  }
+  return data?.attachments ?? [];
 }
 
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────

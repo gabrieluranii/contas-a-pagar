@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import Modal from './Modal';
 import { useApp } from '@/context/AppContext';
+import { AppContext } from '@/context/AppContext';
 import { fmt, fmtDate, todayISO, isOverdue, daysUntil, LAUNCH_DAYS } from '@/lib/utils';
 import { validateBill } from '@/lib/validation';
 
@@ -60,8 +61,10 @@ function Sel({ id, value, onChange, children, error, disabled }) {
 
 export default function BillModal({ open, onClose, editId = null, readOnly = false }) {
   const { state, dispatch } = useApp();
+  const { fetchBillAttachments } = useContext(AppContext);
   const [tab, setTab] = useState('form');
   const [previewAtt, setPreviewAtt] = useState(null);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -125,6 +128,24 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
       setContEnabled(false); setContValue('');
       setAttachments([]);
     }
+  }, [open, editId]); // eslint-disable-line
+
+  // ── Lazy load de anexos ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!open || !editId) return;
+    const b = state.bills.find(x => x.id === editId);
+    // Se já temos anexos no estado global, usa direto
+    if (b?.attachments && b.attachments.length > 0) return;
+    // Busca sob demanda
+    let cancelled = false;
+    setLoadingAttachments(true);
+    fetchBillAttachments(editId).then(att => {
+      if (!cancelled) {
+        setAttachments(att);
+        setLoadingAttachments(false);
+      }
+    });
+    return () => { cancelled = true; };
   }, [open, editId]); // eslint-disable-line
 
   function setF(key, val) {
@@ -385,13 +406,19 @@ export default function BillModal({ open, onClose, editId = null, readOnly = fal
 
       {/* ── ATTACH TAB ── */}
       {tab === 'attach' && (
-        <AttachmentTab
-          attachments={attachments}
-          setAttachments={setAttachments}
-          onAddFiles={addAttachments}
-          onPreview={setPreviewAtt}
-          fileRef={fileRef}
-        />
+        loadingAttachments ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+            Carregando anexos...
+          </div>
+        ) : (
+          <AttachmentTab
+            attachments={attachments}
+            setAttachments={setAttachments}
+            onAddFiles={addAttachments}
+            onPreview={setPreviewAtt}
+            fileRef={fileRef}
+          />
+        )
       )}
 
       {/* Footer */}

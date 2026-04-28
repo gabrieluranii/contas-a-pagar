@@ -1,6 +1,7 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useContext } from 'react';
 import { useApp } from '@/context/AppContext';
+import { AppContext } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import AttachmentTab from '@/components/bill-modal/AttachmentTab';
@@ -116,10 +117,12 @@ function CCSelect({ value, onChange, bases }) {
 
 function LancModal({ open, onClose, editId, readOnly = false }) {
   const { state, dispatch } = useApp();
+  const { fetchLancamentoAttachments } = useContext(AppContext);
   const [tab, setTab] = useState('form');
   const [previewAtt, setPreviewAtt] = useState(null);
   const [form, setForm] = useState({ gestor: '', solnum: '', soldate: '', supplier: '', nf: '', emission: '', due: '', desc: '', cat: '', value: '', tipopgto: '', ccpgto: '' });
   const [attachments, setAttachments] = useState([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
 
@@ -137,6 +140,24 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
       setForm({ gestor: '', solnum: '', soldate: todayISO(), supplier: '', nf: '', emission: '', due: '', desc: '', cat: '', value: '', tipopgto: '', ccpgto: '' });
       setAttachments([]);
     }
+  }, [open, editId]); // eslint-disable-line
+
+  // ── Lazy load de anexos ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!open || !editId) return;
+    const l = state.lancamentos.find(x => x.id === editId);
+    // Se já temos anexos no estado global, usa direto
+    if (l?.attachments && l.attachments.length > 0) return;
+    // Busca sob demanda
+    let cancelled = false;
+    setLoadingAttachments(true);
+    fetchLancamentoAttachments(editId).then(att => {
+      if (!cancelled) {
+        setAttachments(att);
+        setLoadingAttachments(false);
+      }
+    });
+    return () => { cancelled = true; };
   }, [open, editId]); // eslint-disable-line
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
@@ -213,13 +234,19 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
 
       {/* Aba Anexos */}
       {tab === 'attach' && (
-        <AttachmentTab
-          attachments={attachments}
-          setAttachments={readOnly ? () => {} : setAttachments}
-          onAddFiles={readOnly ? () => {} : addAttachments}
-          onPreview={setPreviewAtt}
-          fileRef={fileRef}
-        />
+        loadingAttachments ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+            Carregando anexos...
+          </div>
+        ) : (
+          <AttachmentTab
+            attachments={attachments}
+            setAttachments={readOnly ? () => {} : setAttachments}
+            onAddFiles={readOnly ? () => {} : addAttachments}
+            onPreview={setPreviewAtt}
+            fileRef={fileRef}
+          />
+        )
       )}
 
       {/* Footer */}

@@ -9,6 +9,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-04-23
+
+### Performance
+- Anexos não são mais incluídos no carregamento inicial de bills/lançamentos.
+  Reduz payload de ~8 MB para <100 KB e tempo de carregamento de 7s para <2s.
+- Anexos passam a ser carregados sob demanda quando o modal de edição abre.
+
+### Internal
+- Adicionadas funções `fetchBillAttachments` e `fetchLancamentoAttachments` no AppContext.
+
 ## [1.7.3] - 2026-04-23
 
 ### Security
