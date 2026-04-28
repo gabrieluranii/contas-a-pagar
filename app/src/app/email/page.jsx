@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { fmt, fmtDate } from '@/lib/utils';
 import { v4 as uuid } from 'uuid';
+import { sb } from '@/lib/supabase';
 
 /* ─────────────────────────────────────────────
    ApproveModal — não alterado
@@ -120,9 +121,19 @@ function ChatPanel({ onExtracted }) {
       mime = file.type || 'image/jpeg';
     }
 
+    // Obter token de sessão (cliente Supabase guarda em localStorage)
+    if (!sb) throw new Error('Supabase não configurado.');
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+
     const res = await fetch('/api/ocr', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'authorization': `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify({ mimeType: mime, base64Data: b64 }),
     });
 

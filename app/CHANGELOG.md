@@ -9,6 +9,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-04-29
+
+### Fixed
+- Erro HTTP 401 ao extrair dados de NF/Boleto. Frontend agora envia o `access_token` da sessão Supabase via header `Authorization: Bearer ...`.
+- Backend `/api/ocr` aceita token via header (browser usa localStorage) e mantém fallback de cookie-based para futura migração SSR.
+
 ## [1.9.0] - 2026-04-29
 
 ### Added

@@ -27,9 +27,28 @@ const MAX_BASE64_LENGTH = 7 * 1024 * 1024; // ~5.25 MB binário
 
 export async function POST(req) {
   try {
-    // 1. Auth
-    const supabase = await getServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    // 1. Auth — primeiro tenta Bearer token no header (atual fluxo cliente browser)
+    const authHeader = req.headers.get('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    let user = null;
+
+    if (bearerToken) {
+      // Cliente mandou token explícito — valida com createClient simples (não precisa cookies)
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAuth = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+      const { data, error } = await supabaseAuth.auth.getUser(bearerToken);
+      if (!error && data?.user) user = data.user;
+    } else {
+      // Fallback: cookie-based via @supabase/ssr (pra quando migrarmos)
+      const supabase = await getServerSupabase();
+      const { data: { user: cookieUser } } = await supabase.auth.getUser();
+      user = cookieUser;
+    }
+
     if (!user) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
