@@ -318,7 +318,11 @@ export default function LancamentosPage() {
     _defaultsApplied.current = true;
   }, [state.loaded, lancamentos.length]); // eslint-disable-line
 
-  let list = [...lancamentos];
+  let list = [...lancamentos].sort((a, b) => {
+  if (!a.soldate) return 1;
+  if (!b.soldate) return -1;
+  return b.soldate.localeCompare(a.soldate);
+  });
   if (yearF)     list = list.filter(l => l.soldate?.slice(0, 4) === yearF);
   if (monthF)    list = list.filter(l => l.soldate?.slice(5, 7) === monthF);
   if (gestorF)   list = list.filter(l => l.gestor === gestorF);
