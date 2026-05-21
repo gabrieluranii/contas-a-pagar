@@ -55,8 +55,7 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, o
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.solnum || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.soldate ? fmtDate(l.soldate) : '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', maxWidth: 180, whiteSpace: 'normal' }}>{l.supplier || '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.nf || '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.emission ? fmtDate(l.emission) : '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.nf || '—'}</td>      
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.due ? fmtDate(l.due) : '—'}</td>
       <td>{l.cat ? <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#d97757', background: '#fff4ef', border: '1px solid #d97757', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{l.cat}</span> : <span style={{ color: '#aaa' }}>—</span>}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{fmt(l.value)}</td>
@@ -449,13 +448,12 @@ export default function LancamentosPage() {
                   { label: 'Gestor',       w: '10%' },
                   { label: 'Nº Solic.',    w: '7%'  },
                   { label: 'Data Solic.',  w: '9%'  },
-                  { label: 'Fornecedor',   w: '16%' },
-                  { label: 'NF',           w: '8%'  },
-                  { label: 'Emissão',      w: '9%'  },
+                  { label: 'Fornecedor',   w: '15%' },
+                  { label: 'NF',           w: '5%'  },
                   { label: 'Vencimento',   w: '9%'  },
-                  { label: 'Cat. Despesa', w: '11%' },
+                  { label: 'Cat. Despesa', w: '13%' },
                   { label: 'Valor',        w: '9%'  },
-                  { label: 'CC Pgto',      w: '8%'  },
+                  { label: 'CC Pgto',      w: '15%' },
                 ].map(({ label, w }) => (
                   <th key={label} style={{ background: '#d97757', color: '#ffffff', fontFamily: 'Poppins, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', padding: '12px 10px', whiteSpace: 'nowrap', textAlign: 'center', width: w }}>{label}</th>
                 ))}
