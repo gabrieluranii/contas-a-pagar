@@ -440,8 +440,8 @@ export default function LancamentosPage() {
       </div>
 
       <div style={{ border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)', marginBottom: '1.5rem' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="orcamento-table" style={{ minWidth: 1100 }}>
+       <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table className="orcamento-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 900 }}>
             <thead>
               <tr>
                 {bulkMode && <th style={{ width: 32, background: '#d97757' }}></th>}
