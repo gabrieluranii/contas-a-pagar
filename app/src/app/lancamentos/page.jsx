@@ -54,7 +54,7 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, o
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.gestor || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.solnum || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.soldate ? fmtDate(l.soldate) : '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', maxWidth: 180, whiteSpace: 'normal' }}>{l.supplier || '—'}</td>
+       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>{l.supplier || '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.nf || '—'}</td>      
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.due ? fmtDate(l.due) : '—'}</td>
       <td>{l.cat ? <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#d97757', textAlign: 'center', wordBreak: 'break-word', background: '#fff4ef', border: '1px solid #d97757', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{l.cat}</span> : <span style={{ color: '#aaa' }}>—</span>}</td>
