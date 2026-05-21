@@ -51,16 +51,16 @@ function LancRow({ l, idx, bulkMode, selected, toggleSelect, onEdit, onDelete, o
       style={{ cursor: bulkMode ? 'pointer' : 'default', background: bg, borderBottom: '1px solid #eeeeec', height: 52, transition: 'background 0.12s' }}
     >
       {bulkMode && <td><input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSelect(l.id)} onClick={e => e.stopPropagation()} style={{ width: 15, height: 15, accentColor: '#d97757' }}/></td>}
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.gestor || '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.solnum || '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.soldate ? fmtDate(l.soldate) : '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.gestor || '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.solnum || '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'}}>{l.soldate ? fmtDate(l.soldate) : '—'}</td>
       <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', maxWidth: 180, whiteSpace: 'normal' }}>{l.supplier || '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.nf || '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.emission ? fmtDate(l.emission) : '—'}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.due ? fmtDate(l.due) : '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.nf || '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.emission ? fmtDate(l.emission) : '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.due ? fmtDate(l.due) : '—'}</td>
       <td>{l.cat ? <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#d97757', background: '#fff4ef', border: '1px solid #d97757', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{l.cat}</span> : <span style={{ color: '#aaa' }}>—</span>}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{fmt(l.value)}</td>
-      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333' }}>{l.ccpgto || '—'}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{fmt(l.value)}</td>
+      <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#333333', textAlign: 'center'  }}>{l.ccpgto || '—'}</td>
       <td>
         <div style={{ display: 'flex', gap: 4 }}>
           <button onClick={onView} title="Visualizar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', padding: 4 }}>
@@ -445,8 +445,19 @@ export default function LancamentosPage() {
             <thead>
               <tr>
                 {bulkMode && <th style={{ width: 32, background: '#d97757' }}></th>}
-                {['Gestor','Nº Solic.','Data Solic.','Fornecedor','NF','Emissão','Vencimento','Cat. Despesa','Valor','CC Pgto'].map(h => (
-                  <th key={h} style={{ background: '#d97757', color: '#ffffff', fontFamily: 'Poppins, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', padding: '12px 10px', whiteSpace: 'nowrap' }}>{h}</th>
+                {[
+                  { label: 'Gestor',       w: '10%' },
+                  { label: 'Nº Solic.',    w: '7%'  },
+                  { label: 'Data Solic.',  w: '9%'  },
+                  { label: 'Fornecedor',   w: '16%' },
+                  { label: 'NF',           w: '8%'  },
+                  { label: 'Emissão',      w: '9%'  },
+                  { label: 'Vencimento',   w: '9%'  },
+                  { label: 'Cat. Despesa', w: '11%' },
+                  { label: 'Valor',        w: '9%'  },
+                  { label: 'CC Pgto',      w: '8%'  },
+                ].map(({ label, w }) => (
+                  <th key={label} style={{ background: '#d97757', color: '#ffffff', fontFamily: 'Poppins, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', padding: '12px 10px', whiteSpace: 'nowrap', textAlign: 'center', width: w }}>{label}</th>
                 ))}
                 <th style={{ background: '#d97757', width: 64 }}></th>
               </tr>
