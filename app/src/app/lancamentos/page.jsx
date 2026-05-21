@@ -143,13 +143,10 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
     }
   }, [open, editId]); // eslint-disable-line
 
-  // ── Lazy load de anexos ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!open || !editId) return;
     const l = state.lancamentos.find(x => x.id === editId);
-    // Se já temos anexos no estado global, usa direto
     if (l?.attachments && l.attachments.length > 0) return;
-    // Busca sob demanda
     let cancelled = false;
     setLoadingAttachments(true);
     fetchLancamentoAttachments(editId).then(att => {
@@ -188,7 +185,6 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
 
   return (
     <Modal open={open} onClose={onClose} title={readOnly ? 'Visualizar lançamento' : editId ? 'Editar lançamento' : 'Novo lançamento'} wide>
-      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '1.25rem', marginTop: '-0.5rem' }}>
         {[['form', 'Formulário'], ['attach', 'Anexos']].map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 18px', fontSize: 14, fontFamily: 'inherit', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', borderBottom: tab === t ? '2px solid var(--nav-orange)' : '2px solid transparent', color: tab === t ? 'var(--nav-orange)' : 'var(--text3)', marginBottom: -2, transition: 'all 0.15s' }}>
@@ -200,7 +196,6 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
         ))}
       </div>
 
-      {/* Aba Formulário */}
       {tab === 'form' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {[
@@ -238,7 +233,6 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
         </div>
       )}
 
-      {/* Aba Anexos */}
       {tab === 'attach' && (
         loadingAttachments ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
@@ -255,7 +249,6 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
         )
       )}
 
-      {/* Footer */}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: '1.25rem' }}>
         <button onClick={onClose} style={{ padding: '9px 20px', fontSize: 14, fontFamily: 'inherit', borderRadius: 'var(--radius)', cursor: 'pointer', fontWeight: 500, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
           {readOnly ? 'Fechar' : 'Cancelar'}
@@ -267,7 +260,6 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
         )}
       </div>
 
-      {/* Preview modal */}
       {previewAtt && (
         <div onClick={() => setPreviewAtt(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg)', borderRadius: 16, padding: 20, width: '90vw', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -308,21 +300,24 @@ export default function LancamentosPage() {
   const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
   const [successOpen, setSuccessOpen] = useState(false);
   const [successLanc, setSuccessLanc] = useState(null);
-  
+
   const { lancamentos, gestores, bases } = state;
   const years  = [...new Set(lancamentos.map(l => l.soldate?.slice(0, 4)).filter(Boolean))].sort();
   const months = [...new Set(lancamentos.filter(l => !yearF || l.soldate?.slice(0, 4) === yearF).map(l => l.soldate?.slice(5, 7)).filter(Boolean))].sort();
 
   useEffect(() => {
-  if (_defaultsApplied.current) return;
-  if (!state.loaded || lancamentos.length === 0) return;
-  const _now = new Date();
-  const _y = String(_now.getFullYear());
-  const _m = String(_now.getMonth() + 1).padStart(2, '0');
-  setYearF(_y);
-  setMonthF(_m);
-  _defaultsApplied.current = true;
+    if (_defaultsApplied.current) return;
+    if (!state.loaded || lancamentos.length === 0) return;
+    const _now = new Date();
+    const _y = String(_now.getFullYear());
+    const _m = String(_now.getMonth() + 1).padStart(2, '0');
+    const _years  = [...new Set(lancamentos.map(l => l.soldate?.slice(0, 4)).filter(Boolean))];
+    const _months = [...new Set(lancamentos.filter(l => l.soldate?.slice(0, 4) === _y).map(l => l.soldate?.slice(5, 7)).filter(Boolean))];
+    if (_years.includes(_y))  setYearF(_y);
+    if (_months.includes(_m)) setMonthF(_m);
+    _defaultsApplied.current = true;
   }, [state.loaded, lancamentos.length]); // eslint-disable-line
+
   let list = [...lancamentos];
   if (yearF)     list = list.filter(l => l.soldate?.slice(0, 4) === yearF);
   if (monthF)    list = list.filter(l => l.soldate?.slice(5, 7) === monthF);
