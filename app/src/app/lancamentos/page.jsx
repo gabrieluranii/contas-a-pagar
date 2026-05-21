@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { AppContext } from '@/context/AppContext';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
+import SuccessLancModal from '@/components/SuccessLancModal';
 import AttachmentTab from '@/components/bill-modal/AttachmentTab';
 import { fmt, fmtDate, MONTH_NAMES, normalizeKey, parseExcelDate, parseMoneyValue, todayISO } from '@/lib/utils';
 import { validateLancamento } from '@/lib/validation';
@@ -115,7 +116,7 @@ function CCSelect({ value, onChange, bases }) {
   );
 }
 
-function LancModal({ open, onClose, editId, readOnly = false }) {
+function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
   const { state, dispatch } = useApp();
   const { fetchLancamentoAttachments } = useContext(AppContext);
   const [tab, setTab] = useState('form');
@@ -173,9 +174,14 @@ function LancModal({ open, onClose, editId, readOnly = false }) {
     const errs = validateLancamento(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     const obj = { id: editId || Date.now(), gestor: form.gestor, solnum: form.solnum, soldate: form.soldate, supplier: form.supplier, nf: form.nf, emission: form.emission, due: form.due, desc: form.desc, cat: form.cat, value: parseFloat(form.value), tipopgto: form.tipopgto, ccpgto: form.ccpgto, rateio: [], tvo: null, conting: null, attachments };
-    if (editId) dispatch({ type: 'UPDATE_LANC', payload: obj });
-    else dispatch({ type: 'ADD_LANC', payload: obj });
-    onClose?.();
+    if (editId) {
+      dispatch({ type: 'UPDATE_LANC', payload: obj });
+      onClose?.();
+    } else {
+      dispatch({ type: 'ADD_LANC', payload: obj });
+      onClose?.();
+      onSuccess?.(obj);
+    }
   }
 
   const activeBases = state.bases.filter(b => !b.desmobilizado);
@@ -288,8 +294,9 @@ export default function LancamentosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
-  const [yearF, setYearF] = useState(String(new Date().getFullYear()));
-  const [monthF, setMonthF] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [yearF, setYearF] = useState('');
+  const [monthF, setMonthF] = useState('');
+  const _defaultsApplied = useRef(false);
   const [gestorF, setGestorF] = useState('');
   const [supplierF, setSupplierF] = useState('');
   const [ccF, setCcF] = useState('');
@@ -299,11 +306,23 @@ export default function LancamentosPage() {
   const [importMsg, setImportMsg] = useState('');
   const importRef = useRef(null);
   const [confirmCfg, setConfirmCfg] = useState({ isOpen: false, message: '', onConfirm: null });
-
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successLanc, setSuccessLanc] = useState(null);
+  
   const { lancamentos, gestores, bases } = state;
   const years  = [...new Set(lancamentos.map(l => l.soldate?.slice(0, 4)).filter(Boolean))].sort();
   const months = [...new Set(lancamentos.filter(l => !yearF || l.soldate?.slice(0, 4) === yearF).map(l => l.soldate?.slice(5, 7)).filter(Boolean))].sort();
 
+  useEffect(() => {
+  if (_defaultsApplied.current) return;
+  if (!state.loaded || lancamentos.length === 0) return;
+  const _now = new Date();
+  const _y = String(_now.getFullYear());
+  const _m = String(_now.getMonth() + 1).padStart(2, '0');
+  setYearF(_y);
+  setMonthF(_m);
+  _defaultsApplied.current = true;
+  }, [state.loaded, lancamentos.length]); // eslint-disable-line
   let list = [...lancamentos];
   if (yearF)     list = list.filter(l => l.soldate?.slice(0, 4) === yearF);
   if (monthF)    list = list.filter(l => l.soldate?.slice(5, 7) === monthF);
@@ -447,7 +466,8 @@ export default function LancamentosPage() {
         </div>
       </div>
 
-      <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly}/>
+      <LancModal open={modalOpen} onClose={() => { setModalOpen(false); setEditId(null); }} editId={editId} readOnly={isReadOnly} onSuccess={(obj) => { setSuccessLanc(obj); setSuccessOpen(true); }}/>
+      <SuccessLancModal open={successOpen} onClose={() => setSuccessOpen(false)} lanc={successLanc}/>
       <ConfirmModal isOpen={confirmCfg.isOpen} message={confirmCfg.message} onConfirm={confirmCfg.onConfirm} onCancel={() => setConfirmCfg(prev => ({ ...prev, isOpen: false }))}/>
     </div>
   );
