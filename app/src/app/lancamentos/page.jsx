@@ -115,6 +115,40 @@ function CCSelect({ value, onChange, bases }) {
   );
 }
 
+function SearchableSelect({ value, onChange, options, placeholder = 'Todos' }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block', minWidth: 160 }}>
+      <div
+        onClick={() => { setOpen(o => !o); if (!open) setSearch(''); }}
+        style={{ padding: '5px 10px', fontSize: 13, borderRadius: 20, border: '1px solid #e8e8e5', background: '#ffffff', color: value ? '#333333' : '#999', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, userSelect: 'none', whiteSpace: 'nowrap' }}
+      >
+        <span>{value || placeholder}</span>
+        <span style={{ fontSize: 10, color: '#999' }}>▼</span>
+      </div>
+
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 999, background: '#fff', border: '1px solid #e8e8e5', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid #f0f0ee', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width="13" height="13" fill="none" stroke="#aaa" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input autoFocus type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
+              style={{ border: 'none', outline: 'none', fontSize: 13, width: '100%', fontFamily: 'inherit', background: 'transparent' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', maxHeight: 220 }}>
+            <div onClick
+
 function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
   const { state, dispatch } = useApp();
   const { fetchLancamentoAttachments } = useContext(AppContext);
@@ -404,20 +438,20 @@ export default function LancamentosPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '0.5rem', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>Ano:</span>
-        <select value={yearF} onChange={e => setYearF(e.target.value)} style={selStyle}><option value="">Todos</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>Mês:</span>
-        <select value={monthF} onChange={e => setMonthF(e.target.value)} style={selStyle}><option value="">Todos</option>{months.map(m => <option key={m} value={m}>{MONTH_NAMES[parseInt(m)-1]}</option>)}</select>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>Gestor:</span>
-        <select value={gestorF} onChange={e => setGestorF(e.target.value)} style={selStyle}><option value="">Todos</option>{gestores.map(g => <option key={g} value={g}>{g}</option>)}</select>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>CC:</span>
-        <select value={ccF} onChange={e => setCcF(e.target.value)} style={selStyle}><option value="">Todos</option>{bases.map(b => <option key={b.nome} value={b.nome}>{b.nome}</option>)}</select>
-      </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.5rem', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>Busca:</span>
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Fornecedor, NF, Fluig, descrição..." style={{ padding: '5px 10px', fontSize: 13, borderRadius: 20, border: '1px solid var(--border2)', width: 280, fontFamily: 'inherit' }}/>
-        <button onClick={() => { setYearF(''); setMonthF(''); setGestorF(''); setSupplierF(''); setCcF(''); setSearch(''); }} style={{ padding: '5px 11px', fontSize: 12, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit' }}>Limpar filtros</button>
-      </div>
+  <span style={{ fontSize: 12, color: 'var(--text3)' }}>Ano:</span>
+  <select value={yearF} onChange={e => setYearF(e.target.value)} style={selStyle}><option value="">Todos</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
+  <span style={{ fontSize: 12, color: 'var(--text3)' }}>Mês:</span>
+  <select value={monthF} onChange={e => setMonthF(e.target.value)} style={selStyle}><option value="">Todos</option>{months.map(m => <option key={m} value={m}>{MONTH_NAMES[parseInt(m)-1]}</option>)}</select>
+  <span style={{ fontSize: 12, color: 'var(--text3)' }}>Gestor:</span>
+  <SearchableSelect value={gestorF} onChange={setGestorF} options={gestores} placeholder="Todos" />
+  <span style={{ fontSize: 12, color: 'var(--text3)' }}>CC:</span>
+  <SearchableSelect value={ccF} onChange={setCcF} options={bases.map(b => b.nome)} placeholder="Todos" />
+</div>
+<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.5rem', alignItems: 'center' }}>
+  <span style={{ fontSize: 12, color: 'var(--text3)' }}>Busca:</span>
+  <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Fornecedor, NF, Fluig, descrição..." style={{ padding: '5px 10px', fontSize: 13, borderRadius: 20, border: '1px solid var(--border2)', width: 280, fontFamily: 'inherit' }}/>
+  <button onClick={() => { setYearF(''); setMonthF(''); setGestorF(''); setSupplierF(''); setCcF(''); setSearch(''); }} style={{ padding: '5px 11px', fontSize: 12, background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit' }}>Limpar filtros</button>
+</div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
         {!bulkMode ? (
