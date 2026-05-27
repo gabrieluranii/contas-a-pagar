@@ -341,6 +341,7 @@ export default function Navbar() {
           >
             <SubItem href="/cc"                    label="Centro de Custo"/>
             <SubItem href="/cadastro/categorias"   label="Categorias"/>
+            <SubItem href="/cadastro/fornecedores" label="Fornecedores"/>
           </NavGroup>
           <Div/>
           <NavGroup
