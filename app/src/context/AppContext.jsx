@@ -106,6 +106,7 @@ function innerReducer(state, action) {
         cats:         action.payload.cats          || state.cats,
         catDespesas:  action.payload.catDespesas   || state.catDespesas,
         gestores:     action.payload.gestores      || state.gestores,
+        fornecedores: action.payload.fornecedores  || state.fornecedores,
         orcamentos:   action.payload.orcamentos    || state.orcamentos,
       };
     case 'CLEAR_BILLS':
