@@ -77,6 +77,10 @@ function innerReducer(state, action) {
       return { ...state, gestores: [...state.gestores, action.payload] };
     case 'REMOVE_GESTOR':
       return { ...state, gestores: state.gestores.filter(n => n !== action.name) };
+    case 'ADD_FORNECEDOR':
+      return { ...state, fornecedores: [...state.fornecedores, action.payload] };
+    case 'REMOVE_FORNECEDOR':
+      return { ...state, fornecedores: state.fornecedores.filter(n => n !== action.payload) };
     case 'ADD_CAT_DESPESA':
       return { ...state, catDespesas: [...state.catDespesas, action.payload] };
     case 'REMOVE_CAT_DESPESA':
@@ -120,8 +124,7 @@ function innerReducer(state, action) {
 
 const INITIAL = {
   bills: [], tvoBills: [], lancamentos: [], tvoRegistros: [],
-  bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [],
-  dbOnline: false, loaded: false,
+  bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [], fornecedores: [],
 };
 
 // ── CONTEXT ───────────────────────────────────────────────────────────────────
