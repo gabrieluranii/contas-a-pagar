@@ -253,7 +253,6 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
             { k: 'gestor', label: 'Gestor', type: 'select', opts: state.gestores },
             { k: 'solnum', label: 'Nº Solic.' },
             { k: 'soldate', label: 'Data Solic.', type: 'date' },
-            { k: 'supplier', label: 'Fornecedor', req: true },
             { k: 'nf', label: 'Nota Fiscal' },
             { k: 'emission', label: 'Emissão', type: 'date' },
             { k: 'due', label: 'Vencimento', type: 'date' },
@@ -276,6 +275,10 @@ function LancModal({ open, onClose, editId, readOnly = false, onSuccess }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>CC Pgto</label>
             {readOnly ? <input value={form.ccpgto} disabled style={{ background: 'var(--surface2)', color: '#777' }}/> : <CCSelect value={form.ccpgto} onChange={v => setF('ccpgto', v)} bases={activeBases}/>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Fornecedor <span style={{ color: 'var(--danger)' }}>*</span></label>
+            {readOnly ? <input value={form.supplier} disabled style={{ background: 'var(--surface2)', color: '#777' }}/> : <CCSelect value={form.supplier} onChange={v => setF('supplier', v)} bases={(state.fornecedores || []).map(f => ({ nome: f }))}/>}
           </div>
           <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>Descrição</label>
