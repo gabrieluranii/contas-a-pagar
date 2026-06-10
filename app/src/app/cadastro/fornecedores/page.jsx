@@ -16,10 +16,15 @@ export default function FornecedoresPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // fornecedores agora são objetos { id, name, ... }
+  const fornecedores = state.fornecedores || [];
+
   async function handleAdd() {
     const val = input.trim();
     if (!val) return;
-    if (state.fornecedores.includes(val)) {
+
+    // Checa duplicata pelo nome
+    if (fornecedores.some(f => f.name === val)) {
       showToast('Fornecedor já cadastrado!', 'var(--warning)');
       return;
     }
@@ -29,14 +34,18 @@ export default function FornecedoresPage() {
       if (sb) {
         const user = await getUser();
         if (!user) throw new Error('Usuário não autenticado no Supabase.');
-        const { error } = await sb
+        const { data, error } = await sb
           .from('suppliers')
-          .insert({ name: val, user_id: user.id });
+          .insert({ name: val, user_id: user.id })
+          .select('*')
+          .single();
 
         if (error) throw error;
+        dispatch({ type: 'ADD_FORNECEDOR', payload: data });
+      } else {
+        dispatch({ type: 'ADD_FORNECEDOR', payload: { id: Date.now(), name: val } });
       }
-      
-      dispatch({ type: 'ADD_FORNECEDOR', payload: val });
+
       setInput('');
       showToast('Fornecedor cadastrado com sucesso!', 'var(--accent)');
     } catch (err) {
@@ -47,7 +56,7 @@ export default function FornecedoresPage() {
     }
   }
 
-  async function handleRemove(val) {
+  async function handleRemove(supplier) {
     setLoading(true);
     try {
       if (sb) {
@@ -56,13 +65,14 @@ export default function FornecedoresPage() {
         const { error } = await sb
           .from('suppliers')
           .delete()
-          .eq('name', val)
+          .eq('id', supplier.id)
           .eq('user_id', user.id);
 
         if (error) throw error;
       }
-      
-      dispatch({ type: 'REMOVE_FORNECEDOR', payload: val });
+
+      // Remove pelo id
+      dispatch({ type: 'REMOVE_FORNECEDOR', payload: supplier.name });
       showToast('Fornecedor removido com sucesso!', 'var(--accent)');
     } catch (err) {
       console.error(err);
@@ -135,12 +145,12 @@ export default function FornecedoresPage() {
               }} />
               <span style={{ fontSize: 13, color: 'var(--text3)' }}>Carregando fornecedores...</span>
             </div>
-          ) : state.fornecedores?.length ? state.fornecedores.map(f => (
-            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px', fontSize: 13 }}>
-              {f}
+          ) : fornecedores.length ? fornecedores.map(f => (
+            <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px', fontSize: 13 }}>
+              {f.name}
               <button
                 disabled={loading}
-                onClick={() => setConfirmCfg({ isOpen: true, message: `Remover "${f}"?`, onConfirm: () => handleRemove(f) })}
+                onClick={() => setConfirmCfg({ isOpen: true, message: `Remover "${f.name}"?`, onConfirm: () => handleRemove(f) })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: 0, lineHeight: 1 }}
               >✕</button>
             </div>
@@ -175,4 +185,3 @@ export default function FornecedoresPage() {
     </div>
   );
 }
-
