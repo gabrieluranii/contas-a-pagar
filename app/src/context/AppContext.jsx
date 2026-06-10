@@ -81,6 +81,12 @@ function innerReducer(state, action) {
       return { ...state, fornecedores: [...state.fornecedores, action.payload] };
     case 'REMOVE_FORNECEDOR':
       return { ...state, fornecedores: state.fornecedores.filter(n => n !== action.payload) };
+    case 'SET_FORNECEDORES':
+      return { ...state, fornecedores: action.payload };
+    case 'SET_SUPPLIER_LOADING':
+      return { ...state, loadingSuppliers: action.payload };
+    case 'SET_SUPPLIER_ERROR':
+      return { ...state, supplierError: action.payload };
     case 'ADD_CAT_DESPESA':
       return { ...state, catDespesas: [...state.catDespesas, action.payload] };
     case 'REMOVE_CAT_DESPESA':
@@ -126,6 +132,8 @@ function innerReducer(state, action) {
 const INITIAL = {
   bills: [], tvoBills: [], lancamentos: [], tvoRegistros: [],
   bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [], fornecedores: [],
+  loadingSuppliers: false,
+  supplierError: null,
 };
 
 // ── CONTEXT ───────────────────────────────────────────────────────────────────
@@ -191,6 +199,50 @@ export function AppProvider({ children }) {
     state.bills, state.tvoBills, state.lancamentos, state.tvoRegistros,
     state.bases, state.cats, state.catDespesas, state.gestores, state.orcamentos,
   ]);
+
+  // ── Carrega fornecedores (suppliers) do Supabase ──────────────────────────
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !sb) return;
+
+    async function fetchSuppliers() {
+      dispatch({ type: 'SET_SUPPLIER_LOADING', payload: true });
+      dispatch({ type: 'SET_SUPPLIER_ERROR', payload: null });
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) {
+          dispatch({ type: 'SET_FORNECEDORES', payload: [] });
+          return;
+        }
+        const { data, error } = await sb
+          .from('suppliers')
+          .select('name')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        dispatch({ type: 'SET_FORNECEDORES', payload: (data || []).map(r => r.name) });
+      } catch (e) {
+        console.warn('Falha ao carregar fornecedores:', e.message);
+        dispatch({ type: 'SET_SUPPLIER_ERROR', payload: e.message });
+      } finally {
+        dispatch({ type: 'SET_SUPPLIER_LOADING', payload: false });
+      }
+    }
+
+    fetchSuppliers();
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        fetchSuppliers();
+      } else {
+        dispatch({ type: 'SET_FORNECEDORES', payload: [] });
+      }
+    });
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <AppContext.Provider value={{ state, dispatch, fetchBillAttachments, fetchLancamentoAttachments }}>
