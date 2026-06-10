@@ -196,8 +196,10 @@ export function AppProvider({ children }) {
       }
     });
 
-    // FIX: removido "as any" (era TypeScript, inválido em .jsx)
-    loadForUser(sb.auth.getSession?.()?.data?.session?.user?.id || null);
+    // getSession é assíncrono — busca o uid corretamente antes de chamar loadForUser
+    sb.auth.getSession().then(({ data }) => {
+      loadForUser(data?.session?.user?.id || null);
+    });
 
     return () => subscription?.unsubscribe?.();
   }, []);
