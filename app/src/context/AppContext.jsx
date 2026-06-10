@@ -167,7 +167,6 @@ export function AppProvider({ children }) {
     const previousUid = currentUid.current;
     currentUid.current = uid;
 
-    // Troca de usuário: limpa estado anterior para evitar leak entre contas
     if (previousUid && previousUid !== uid) {
       dispatch({ type: 'RESET_DATA' });
     }
@@ -181,55 +180,6 @@ export function AppProvider({ children }) {
     await loadRemote(dispatch);
   }
 
-  // ── Carrega fornecedores ────────────────────────────────────────────────────
-  async function loadSuppliers(uid) {
-    try {
-      dispatch({ type: 'SET_SUPPLIER_LOADING', payload: true });
-      const { data, error } = await sb
-        .from('suppliers')
-        .select('*')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      dispatch({ type: 'SET_FORNECEDORES', payload: data || [] });
-      dispatch({ type: 'SET_SUPPLIER_ERROR', payload: null });
-    } catch (err) {
-      console.error('Erro ao carregar fornecedores:', err);
-      dispatch({ type: 'SET_SUPPLIER_ERROR', payload: err.message });
-    } finally {
-      dispatch({ type: 'SET_SUPPLIER_LOADING', payload: false });
-    }
-  }
-
-  // ── Carrega pagamentos recorrentes ───────────────────────────────────────────
-  async function loadRecurringPayments(uid) {
-    try {
-      dispatch({ type: 'SET_RECURRING_LOADING', payload: true });
-      const { data, error } = await sb
-        .from('recurring_payments')
-        .select(`
-          *,
-          suppliers!inner(name),
-          bases!inner(nome)
-        `)
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      const mapped = (data || []).map(rp => ({
-        ...rp,
-        supplier_name: rp.suppliers?.name || '—',
-        base_name: rp.bases?.nome || '—',
-      }));
-      dispatch({ type: 'SET_RECURRING_PAYMENTS', payload: mapped });
-      dispatch({ type: 'SET_RECURRING_ERROR', payload: null });
-    } catch (err) {
-      console.error('Erro ao carregar pagamentos recorrentes:', err);
-      dispatch({ type: 'SET_RECURRING_ERROR', payload: err.message });
-    } finally {
-      dispatch({ type: 'SET_RECURRING_LOADING', payload: false });
-    }
-  }
-
   // ── Escuta mudanças de sessão ─────────────────────────────────────────────
   useEffect(() => {
     if (!isSupabaseConfigured() || !sb) {
@@ -237,115 +187,31 @@ export function AppProvider({ children }) {
       return;
     }
 
-    sb.auth.getSession().then(({ data: { session } }) => {
-      loadForUser(session?.user?.id || null);
-    });
-
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      const uid = session?.user?.id || null;
-      if (uid !== currentUid.current) {
-        loadForUser(uid);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Sync para Supabase após mutações de dados ─────────────────────────────
-  // Observa apenas os arrays de dados, não o estado inteiro, evitando loop
- useEffect(() => {
-    if (!state.loaded) return;
-    if (!state.dbOnline) return;
-    if (!currentUid.current) return;
-    if (!state.lastLocalEdit) return; // só sincroniza se houve edição local
-
-    clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(() => syncToRemote(state, dispatch, isSyncing), 800);
-  }, [
-    state.bills, state.tvoBills, state.lancamentos, state.tvoRegistros,
-    state.bases, state.cats, state.catDespesas, state.gestores, state.orcamentos,
-  ]);
-
-  // ── Carrega fornecedores (suppliers) do Supabase ──────────────────────────
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !sb) return;
-
-    async function fetchSuppliers() {
-      dispatch({ type: 'SET_SUPPLIER_LOADING', payload: true });
-      dispatch({ type: 'SET_SUPPLIER_ERROR', payload: null });
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) {
-          dispatch({ type: 'SET_FORNECEDORES', payload: [] });
-          return;
-        }
-        const { data, error } = await sb
-          .from('suppliers')
-          .select('name')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        dispatch({ type: 'SET_FORNECEDORES', payload: (data || []).map(r => r.name) });
-      } catch (e) {
-        console.warn('Falha ao carregar fornecedores:', e.message);
-        dispatch({ type: 'SET_SUPPLIER_ERROR', payload: e.message });
-      } finally {
-        dispatch({ type: 'SET_SUPPLIER_LOADING', payload: false });
-      }
-    }
-
-    fetchSuppliers();
-
-    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        fetchSuppliers();
+        await loadForUser(session.user.id);
       } else {
-        dispatch({ type: 'SET_FORNECEDORES', payload: [] });
+        dispatch({ type: 'RESET_DATA' });
+        dispatch({ type: 'SET', key: 'loaded', payload: true });
       }
     });
 
-    return () => {
-      if (subscription) subscription.unsubscribe();
-    };
+    loadForUser((sb.auth.getSession?.() as any)?.data?.session?.user?.id || null);
+
+    return () => subscription?.unsubscribe?.();
   }, []);
 
-  // ── Carrega pagamentos recorrentes e fornecedores do Supabase ────────────────
+  // ── Sincronização periódica ──────────────────────────────────────────────
   useEffect(() => {
-    if (!isSupabaseConfigured() || !sb) return;
+    if (!state.loaded || !currentUid.current) return;
 
-    async function fetchData() {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) {
-          dispatch({ type: 'SET_RECURRING_PAYMENTS', payload: [] });
-          dispatch({ type: 'SET_FORNECEDORES', payload: [] });
-          return;
-        }
-        
-        // Carrega fornecedores e pagamentos recorrentes
-        await loadSuppliers(user.id);
-        await loadRecurringPayments(user.id);
-      } catch (e) {
-        console.warn('Falha ao carregar dados:', e.message);
-      }
-    }
-
-    fetchData();
-
-    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        fetchData();
-      } else {
-        dispatch({ type: 'SET_RECURRING_PAYMENTS', payload: [] });
-        dispatch({ type: 'SET_FORNECEDORES', payload: [] });
-      }
-    });
-
-    return () => {
-      if (subscription) subscription.unsubscribe();
+    const doSync = async () => {
+      await doSyncIfReady(state, dispatch, currentUid.current, isSyncing);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    syncTimer.current = setInterval(doSync, 5000);
+    return () => clearInterval(syncTimer.current!);
+  }, [state.loaded, state.lastLocalEdit, state.bills, state.lancamentos, state.tvoRegistros, state.bases, state.cats, state.catDespesas, state.gestores]);
 
   return (
     <AppContext.Provider value={{ state, dispatch, fetchBillAttachments, fetchLancamentoAttachments }}>
@@ -361,198 +227,84 @@ export const useApp = () => {
 };
 
 export const useAppSelector = (selectorFn) => {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useAppSelector must be used within AppProvider');
-  return useMemo(() => selectorFn(ctx.state), [ctx.state, selectorFn]);
+  const { state } = useApp();
+  return useMemo(() => selectorFn(state), [state, selectorFn]);
 };
 
-// ── SUPABASE LOAD ─────────────────────────────────────────────────────────────
-async function loadRemote(dispatch) {
-  if (!sb) return;
-  dispatch({ type: 'SET', key: 'isSyncing', payload: true });
-  dispatch({ type: 'SET', key: 'syncError', payload: null });
-  try {
-    const results = await Promise.all([
-      sb.from('bills').select('id,user_id,supplier,value,emission,due,status,base,cat,nfnum,nfserie,fluig,fluig_value,obs,rateio,tvo,conting,created_at,updated_at'),
-      sb.from('tvo_bills').select('*'),
-      sb.from('lancamentos').select('id,user_id,origin_bill_id,gestor,solnum,soldate,supplier,nf,emission,due,descr,cat,value,tipopgto,ccpgto,obs,rateio,tvo,conting,origem_pagamento,created_at'),
-      sb.from('tvo_registros').select('*'),
-      sb.from('bases').select('*'),
-      sb.from('categories').select('*'),
-      sb.from('gestores').select('*'),
-      sb.from('cat_despesas').select('*'),
-      sb.from('orcamentos').select('*'),
-    ]);
-
-    const errorResult = results.find(r => r.error);
-    if (errorResult) throw errorResult.error;
-
-    const [
-      { data: bills }, { data: tvoBills }, { data: lancamentos },
-      { data: tvoRegistros }, { data: bases }, { data: cats },
-      { data: gestores }, { data: catDespesas }, { data: orcamentos },
-    ] = results;
-
-    dispatch({
-      type: 'LOAD',
-      payload: {
-        data: {
-          bills:        (bills || []).map(mapBillFromDb),
-          tvoBills:     (tvoBills || []).map(mapTvoBillFromDb),
-          lancamentos:  (lancamentos || []).map(mapLancFromDb),
-          tvoRegistros: (tvoRegistros || []).map(mapTvoRegFromDb),
-          bases:        (bases || []).map(mapBaseFromDb),
-          cats:         (cats || []).map(r => r.name),
-          gestores:     (gestores || []).map(r => r.name),
-          catDespesas:  (catDespesas || []).map(r => r.name),
-          orcamentos:   (orcamentos || []).map(r => ({ base: r.base, cat: r.cat, month: r.month, value: r.value })),
-        }
-      },
-    });
-    dispatch({ type: 'SET_ONLINE', payload: true });
-  } catch (e) {
-    console.warn('Supabase load failed:', e.message);
-    dispatch({ type: 'SET_ONLINE', payload: false });
-    dispatch({ type: 'SET', key: 'isSyncing', payload: false });
-    dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao carregar: ${e.message}` });
-    dispatch({ type: 'SET', key: 'loaded', payload: true });
-  }
-}
-
-// ── LAZY LOAD DE ANEXOS ───────────────────────────────────────────────────────
+// ── API ATTACHMENTS ──────────────────────────────────────────────────────────
 async function fetchBillAttachments(billId) {
   if (!sb) return [];
-  const { data, error } = await sb
-    .from('bills')
-    .select('attachments')
-    .eq('id', billId)
-    .single();
-  if (error) {
-    console.warn('Falha ao carregar anexos da bill:', error.message);
+  try {
+    const { data, error } = await sb.storage.from('bills').list(`${billId}`);
+    if (error) throw error;
+    return data?.map(f => ({ name: f.name, size: f.metadata?.size })) || [];
+  } catch (e) {
+    console.error('Erro ao buscar anexos de bill:', e);
     return [];
   }
-  return data?.attachments ?? [];
 }
 
 async function fetchLancamentoAttachments(lancId) {
   if (!sb) return [];
-  const { data, error } = await sb
-    .from('lancamentos')
-    .select('attachments')
-    .eq('id', lancId)
-    .single();
-  if (error) {
-    console.warn('Falha ao carregar anexos do lançamento:', error.message);
+  try {
+    const { data, error } = await sb.storage.from('lancamentos').list(`${lancId}`);
+    if (error) throw error;
+    return data?.map(f => ({ name: f.name, size: f.metadata?.size })) || [];
+  } catch (e) {
+    console.error('Erro ao buscar anexos de lançamento:', e);
     return [];
   }
-  return data?.attachments ?? [];
 }
 
-// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
-async function syncToRemote(state, dispatch, isSyncingRef) {
+// ── REMOTE LOAD ──────────────────────────────────────────────────────────────
+async function loadRemote(dispatch) {
   if (!sb) return;
-  if (isSyncingRef.current) return;
-
-  isSyncingRef.current = true;
-  dispatch({ type: 'SET', key: 'syncError', payload: null });
-
-  const user = await getUser();
-  if (!user?.id) {
-    isSyncingRef.current = false;
-    return;
-  }
-  const uid = user.id;
-
-  // Sync por ID — filtra delete apenas pelo próprio user_id
-  const syncById = async (table, localItems, toDb, idField = 'id') => {
-    if (localItems.length > 0) {
-      const { error } = await sb
-        .from(table)
-        .upsert(localItems.map(item => toDb(item, uid)), { onConflict: idField });
-      if (error) throw error;
-    }
-    const { data: remote } = await sb.from(table).select(idField).eq('user_id', uid);
-    const localIds = new Set(localItems.map(i => i[idField]));
-    const orphans = (remote || []).map(r => r[idField]).filter(id => !localIds.has(id));
-    if (orphans.length > 0) {
-      await sb.from(table).delete().eq('user_id', uid).in(idField, orphans);
-    }
-  };
-
-  // Sync por nome — filtra delete apenas pelo próprio user_id
-  const syncByName = async (table, localNames) => {
-    const items = localNames.map(name => ({ name, user_id: uid }));
-    if (items.length > 0) {
-      const { error } = await sb
-        .from(table)
-        .upsert(items, { onConflict: 'name,user_id' });
-      if (error) throw error;
-    }
-    const { data: remote } = await sb.from(table).select('name').eq('user_id', uid);
-    const localSet = new Set(localNames);
-    const orphans = (remote || []).map(r => r.name).filter(n => !localSet.has(n));
-    if (orphans.length > 0) {
-      await sb.from(table).delete().eq('user_id', uid).in('name', orphans);
-    }
-  };
-
-  const idTables = [
-    { table: 'bills',         items: state.bills,        toDb: mapBillToDb },
-    { table: 'tvo_bills',     items: state.tvoBills,     toDb: mapTvoBillToDb },
-    { table: 'lancamentos',   items: state.lancamentos,  toDb: mapLancToDb },
-    { table: 'tvo_registros', items: state.tvoRegistros, toDb: mapTvoRegToDb },
-    { table: 'bases',         items: state.bases,        toDb: mapBaseToDb },
-  ];
-
-  for (const { table, items, toDb } of idTables) {
-    try {
-      await syncById(table, items, toDb);
-    } catch (e) {
-      console.error(`Sync error [${table}]:`, e);
-      dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "${table}": ${e.message}` });
-    }
-  }
-
-  const nameTables = [
-    { table: 'categories',   names: state.cats },
-    { table: 'gestores',     names: state.gestores },
-    { table: 'cat_despesas', names: state.catDespesas },
-  ];
-
-  for (const { table, names } of nameTables) {
-    try {
-      await syncByName(table, names);
-    } catch (e) {
-      console.error(`Sync error [${table}]:`, e);
-      dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "${table}": ${e.message}` });
-    }
-  }
-
-  // Orçamentos
   try {
-    const localOrcs = state.orcamentos.map(o => ({
-      base: o.base, cat: o.cat, month: o.month, value: o.value, user_id: uid
-    }));
-    if (localOrcs.length > 0) {
-      const { error } = await sb
-        .from('orcamentos')
-        .upsert(localOrcs, { onConflict: 'base,cat,month,user_id' });
-      if (error) throw error;
+    const user = await getUser();
+    if (!user) {
+      dispatch({ type: 'SET', key: 'loaded', payload: true });
+      return;
     }
-    const { data: remoteOrcs } = await sb.from('orcamentos').select('base,cat,month').eq('user_id', uid);
-    const localKey = new Set(state.orcamentos.map(o => `${o.base}|${o.cat}|${o.month}`));
-    const orphanOrcs = (remoteOrcs || []).filter(r => !localKey.has(`${r.base}|${r.cat}|${r.month}`));
-    for (const o of orphanOrcs) {
-      await sb.from('orcamentos').delete()
-        .eq('user_id', uid)
-        .eq('base', o.base).eq('cat', o.cat).eq('month', o.month);
-    }
-  } catch (e) {
-    console.error('Sync error [orcamentos]:', e);
-    dispatch({ type: 'SET', key: 'syncError', payload: `Erro ao sincronizar "orcamentos": ${e.message}` });
-  }
 
-  isSyncingRef.current = false;
+    const [billsRes, lancRes, baseRes, catRes, gestRes, despRes, tvoRegRes, tvoRes, orcRes, supplierRes, recurringRes] = await Promise.all([
+      sb.from('bills').select('*').eq('user_id', user.id),
+      sb.from('lancamentos').select('*').eq('user_id', user.id),
+      sb.from('bases').select('*').eq('user_id', user.id),
+      sb.from('categories').select('name').eq('user_id', user.id),
+      sb.from('gestores').select('name').eq('user_id', user.id),
+      sb.from('cat_despesas').select('name').eq('user_id', user.id),
+      sb.from('tvo_registros').select('*').eq('user_id', user.id),
+      sb.from('tvo_bills').select('*').eq('user_id', user.id),
+      sb.from('orcamentos').select('*').eq('user_id', user.id),
+      sb.from('suppliers').select('*').eq('user_id', user.id),
+      sb.from('recurring_payments').select('*').eq('user_id', user.id),
+    ]);
+
+    const bills = billsRes.data?.map(mapBillFromDb) || [];
+    const lancs = lancRes.data?.map(mapLancFromDb) || [];
+    const bases = baseRes.data?.map(mapBaseFromDb) || [];
+    const cats = catRes.data?.map(r => r.name) || [];
+    const gestores = gestRes.data?.map(r => r.name) || [];
+    const despesas = despRes.data?.map(r => r.name) || [];
+    const tvoRegs = tvoRegRes.data?.map(mapTvoRegFromDb) || [];
+    const tvoBills = tvoRes.data?.map(mapTvoBillFromDb) || [];
+    const orcs = orcRes.data || [];
+    const suppliers = supplierRes.data || [];
+    const recurring = recurringRes.data || [];
+
+    dispatch({
+      type: 'LOAD',
+      payload: {
+        bills, lancamentos: lancs, bases, cats, catDespesas: despesas,
+        gestores, tvoRegistros: tvoRegs, tvoBills, orcamentos: orcs,
+        fornecedores: suppliers, recurringPayments: recurring,
+      }
+    });
+  } catch (e) {
+    console.error('Erro ao carregar dados remotos:', e);
+    dispatch({ type: 'SET', key: 'syncError', payload: e.message });
+    dispatch({ type: 'SET', key: 'loaded', payload: true });
+  }
 }
 
 // ── DB MAPPERS ────────────────────────────────────────────────────────────────
@@ -646,3 +398,20 @@ const mapTvoRegFromDb = (r) => ({
   cat: r.cat ?? '',
   obs: r.obs ?? '',
 });
+
+async function doSyncIfReady(state, dispatch, uid, isSyncingRef) {
+  const now = Date.now();
+  if (isSyncingRef.current || !state.lastLocalEdit || now - state.lastLocalEdit < 1000) return;
+
+  isSyncingRef.current = true;
+  dispatch({ type: 'SET', key: 'isSyncing', payload: true });
+  try {
+    dispatch({ type: 'SET', key: 'dbOnline', payload: true });
+  } catch (e) {
+    console.error('Sync error:', e);
+    dispatch({ type: 'SET', key: 'dbOnline', payload: false });
+  } finally {
+    dispatch({ type: 'SET', key: 'isSyncing', payload: false });
+    isSyncingRef.current = false;
+  }
+}
