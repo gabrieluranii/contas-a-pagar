@@ -44,6 +44,23 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
     setOpenBaseDropdown(false);
   }, [editingPayment, isOpen]);
 
+  // Fechar dropdowns ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (!e.target.closest('[data-dropdown="supplier"]')) {
+        setOpenSupplierDropdown(false);
+      }
+      if (!e.target.closest('[data-dropdown="base"]')) {
+        setOpenBaseDropdown(false);
+      }
+    }
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
   function validate() {
     const errs = {};
     if (!formData.supplier_id) errs.supplier_id = 'Selecione um fornecedor';
@@ -106,7 +123,7 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Fornecedor com Search */}
-          <div>
+          <div data-dropdown="supplier">
             <label style={{
               display: 'block', marginBottom: 6, fontSize: 13,
               fontWeight: 500, color: '#1a1a1a',
@@ -227,7 +244,7 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
           </div>
 
           {/* Centro de Custo com Search */}
-          <div>
+          <div data-dropdown="base">
             <label style={{
               display: 'block', marginBottom: 6, fontSize: 13,
               fontWeight: 500, color: '#1a1a1a',
