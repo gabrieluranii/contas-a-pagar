@@ -187,6 +187,8 @@ export function AppProvider({ children }) {
       return;
     }
 
+    // onAuthStateChange já dispara INITIAL_SESSION com a sessão atual,
+    // então não precisamos de getSession separado — evita race condition
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         await loadForUser(session.user.id);
@@ -194,11 +196,6 @@ export function AppProvider({ children }) {
         dispatch({ type: 'RESET_DATA' });
         dispatch({ type: 'SET', key: 'loaded', payload: true });
       }
-    });
-
-    // getSession é assíncrono — busca o uid corretamente antes de chamar loadForUser
-    sb.auth.getSession().then(({ data }) => {
-      loadForUser(data?.session?.user?.id || null);
     });
 
     return () => subscription?.unsubscribe?.();
