@@ -12,10 +12,6 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [searchSupplier, setSearchSupplier] = useState('');
-  const [searchBase, setSearchBase] = useState('');
-  const [openSupplierDropdown, setOpenSupplierDropdown] = useState(false);
-  const [openBaseDropdown, setOpenBaseDropdown] = useState(false);
 
   // Popular form ao editar
   useEffect(() => {
@@ -27,8 +23,6 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
         base_id: editingPayment.base_id || '',
       });
       setErrors({});
-      setSearchSupplier('');
-      setSearchBase('');
     } else {
       setFormData({
         supplier_id: '',
@@ -37,29 +31,8 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
         base_id: '',
       });
       setErrors({});
-      setSearchSupplier('');
-      setSearchBase('');
     }
-    setOpenSupplierDropdown(false);
-    setOpenBaseDropdown(false);
   }, [editingPayment, isOpen]);
-
-  // Fechar dropdowns ao clicar fora
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (!e.target.closest('[data-dropdown="supplier"]')) {
-        setOpenSupplierDropdown(false);
-      }
-      if (!e.target.closest('[data-dropdown="base"]')) {
-        setOpenBaseDropdown(false);
-      }
-    }
-    
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
 
   function validate() {
     const errs = {};
@@ -96,6 +69,9 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
 
   if (!isOpen) return null;
 
+  const suppliers = state.fornecedores || [];
+  const bases = state.bases || [];
+
   return (
     <div
       style={{
@@ -122,67 +98,32 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
         </h2>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Fornecedor com Search */}
-          <div data-dropdown="supplier">
+          {/* Fornecedor */}
+          <div>
             <label style={{
               display: 'block', marginBottom: 6, fontSize: 13,
               fontWeight: 500, color: '#1a1a1a',
             }}>
               Fornecedor *
             </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Pesquisar fornecedor..."
-                value={searchSupplier}
-                onChange={(e) => setSearchSupplier(e.target.value)}
-                onFocus={() => setOpenSupplierDropdown(true)}
-                style={{
-                  width: '100%', padding: '10px 12px', fontSize: 13,
-                  border: `1px solid ${errors.supplier_id ? '#cc4444' : 'var(--border)'}`,
-                  borderRadius: 'var(--radius)', background: '#fff', color: '#1a1a1a',
-                  fontFamily: 'inherit', cursor: 'pointer',
-                  transition: 'border-color 0.2s',
-                }}
-              />
-              {openSupplierDropdown && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
-                  background: '#fff', border: `1px solid var(--border)`,
-                  borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)',
-                  maxHeight: 200, overflowY: 'auto',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                }}>
-                  {(state.fornecedores || [])
-                    .filter(s => s.name.toLowerCase().includes(searchSupplier.toLowerCase()))
-                    .map(s => (
-                      <div
-                        key={s.id}
-                        onClick={() => {
-                          setFormData({ ...formData, supplier_id: s.id });
-                          setSearchSupplier(s.name);
-                          setOpenSupplierDropdown(false);
-                        }}
-                        style={{
-                          padding: '10px 12px', fontSize: 13, cursor: 'pointer',
-                          borderBottom: '1px solid #f0f0f0',
-                          background: formData.supplier_id === s.id ? '#f0f0f0' : '#fff',
-                          transition: 'background 0.1s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = formData.supplier_id === s.id ? '#f0f0f0' : '#fff'}
-                      >
-                        {s.name}
-                      </div>
-                    ))}
-                  {(state.fornecedores || []).filter(s => s.name.toLowerCase().includes(searchSupplier.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '10px 12px', fontSize: 13, color: '#999', textAlign: 'center' }}>
-                      Nenhum fornecedor encontrado
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <select
+              value={formData.supplier_id}
+              onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
+              style={{
+                width: '100%', padding: '10px 12px', fontSize: 13,
+                border: `1px solid ${errors.supplier_id ? '#cc4444' : 'var(--border)'}`,
+                borderRadius: 'var(--radius)', background: '#fff', color: '#1a1a1a',
+                fontFamily: 'inherit', cursor: 'pointer',
+                transition: 'border-color 0.2s',
+              }}
+            >
+              <option value="">Selecione um fornecedor...</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
             {errors.supplier_id && (
               <div style={{ fontSize: 12, color: '#cc4444', marginTop: 4 }}>{errors.supplier_id}</div>
             )}
@@ -243,67 +184,32 @@ export default function RecurringPaymentModal({ isOpen, onClose, onSave, editing
             )}
           </div>
 
-          {/* Centro de Custo com Search */}
-          <div data-dropdown="base">
+          {/* Centro de Custo */}
+          <div>
             <label style={{
               display: 'block', marginBottom: 6, fontSize: 13,
               fontWeight: 500, color: '#1a1a1a',
             }}>
               Centro de Custo *
             </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Pesquisar centro de custo..."
-                value={searchBase}
-                onChange={(e) => setSearchBase(e.target.value)}
-                onFocus={() => setOpenBaseDropdown(true)}
-                style={{
-                  width: '100%', padding: '10px 12px', fontSize: 13,
-                  border: `1px solid ${errors.base_id ? '#cc4444' : 'var(--border)'}`,
-                  borderRadius: 'var(--radius)', background: '#fff', color: '#1a1a1a',
-                  fontFamily: 'inherit', cursor: 'pointer',
-                  transition: 'border-color 0.2s',
-                }}
-              />
-              {openBaseDropdown && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
-                  background: '#fff', border: `1px solid var(--border)`,
-                  borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)',
-                  maxHeight: 200, overflowY: 'auto',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                }}>
-                  {(state.bases || [])
-                    .filter(b => b.nome.toLowerCase().includes(searchBase.toLowerCase()))
-                    .map(b => (
-                      <div
-                        key={b.id}
-                        onClick={() => {
-                          setFormData({ ...formData, base_id: b.id });
-                          setSearchBase(b.nome);
-                          setOpenBaseDropdown(false);
-                        }}
-                        style={{
-                          padding: '10px 12px', fontSize: 13, cursor: 'pointer',
-                          borderBottom: '1px solid #f0f0f0',
-                          background: formData.base_id === b.id ? '#f0f0f0' : '#fff',
-                          transition: 'background 0.1s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = formData.base_id === b.id ? '#f0f0f0' : '#fff'}
-                      >
-                        {b.nome}
-                      </div>
-                    ))}
-                  {(state.bases || []).filter(b => b.nome.toLowerCase().includes(searchBase.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '10px 12px', fontSize: 13, color: '#999', textAlign: 'center' }}>
-                      Nenhum centro de custo encontrado
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <select
+              value={formData.base_id}
+              onChange={(e) => setFormData({ ...formData, base_id: e.target.value })}
+              style={{
+                width: '100%', padding: '10px 12px', fontSize: 13,
+                border: `1px solid ${errors.base_id ? '#cc4444' : 'var(--border)'}`,
+                borderRadius: 'var(--radius)', background: '#fff', color: '#1a1a1a',
+                fontFamily: 'inherit', cursor: 'pointer',
+                transition: 'border-color 0.2s',
+              }}
+            >
+              <option value="">Selecione um centro de custo...</option>
+              {bases.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nome}
+                </option>
+              ))}
+            </select>
             {errors.base_id && (
               <div style={{ fontSize: 12, color: '#cc4444', marginTop: 4 }}>{errors.base_id}</div>
             )}
