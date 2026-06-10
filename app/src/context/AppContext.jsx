@@ -87,6 +87,20 @@ function innerReducer(state, action) {
       return { ...state, loadingSuppliers: action.payload };
     case 'SET_SUPPLIER_ERROR':
       return { ...state, supplierError: action.payload };
+    case 'SET_RECURRING_PAYMENTS':
+      return { ...state, recurringPayments: action.payload };
+    case 'ADD_RECURRING_PAYMENT':
+      return { ...state, recurringPayments: [action.payload, ...state.recurringPayments] };
+    case 'UPDATE_RECURRING_PAYMENT':
+      return { ...state, recurringPayments: state.recurringPayments.map(p => p.id === action.payload.id ? action.payload : p) };
+    case 'DELETE_RECURRING_PAYMENT':
+      return { ...state, recurringPayments: state.recurringPayments.filter(p => p.id !== action.payload) };
+    case 'TOGGLE_RECURRING_PAYMENT':
+      return { ...state, recurringPayments: state.recurringPayments.map(p => p.id === action.payload.id ? { ...p, active: action.payload.active } : p) };
+    case 'SET_RECURRING_LOADING':
+      return { ...state, loadingRecurring: action.payload };
+    case 'SET_RECURRING_ERROR':
+      return { ...state, recurringError: action.payload };
     case 'ADD_CAT_DESPESA':
       return { ...state, catDespesas: [...state.catDespesas, action.payload] };
     case 'REMOVE_CAT_DESPESA':
@@ -134,6 +148,9 @@ const INITIAL = {
   bases: [], cats: [], catDespesas: [], gestores: [], orcamentos: [], fornecedores: [],
   loadingSuppliers: false,
   supplierError: null,
+  recurringPayments: [],
+  loadingRecurring: false,
+  recurringError: null,
 };
 
 // ── CONTEXT ───────────────────────────────────────────────────────────────────
@@ -162,6 +179,55 @@ export function AppProvider({ children }) {
     }
 
     await loadRemote(dispatch);
+  }
+
+  // ── Carrega fornecedores ────────────────────────────────────────────────────
+  async function loadSuppliers(uid) {
+    try {
+      dispatch({ type: 'SET_SUPPLIER_LOADING', payload: true });
+      const { data, error } = await sb
+        .from('suppliers')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      dispatch({ type: 'SET_FORNECEDORES', payload: data || [] });
+      dispatch({ type: 'SET_SUPPLIER_ERROR', payload: null });
+    } catch (err) {
+      console.error('Erro ao carregar fornecedores:', err);
+      dispatch({ type: 'SET_SUPPLIER_ERROR', payload: err.message });
+    } finally {
+      dispatch({ type: 'SET_SUPPLIER_LOADING', payload: false });
+    }
+  }
+
+  // ── Carrega pagamentos recorrentes ───────────────────────────────────────────
+  async function loadRecurringPayments(uid) {
+    try {
+      dispatch({ type: 'SET_RECURRING_LOADING', payload: true });
+      const { data, error } = await sb
+        .from('recurring_payments')
+        .select(`
+          *,
+          suppliers!inner(name),
+          bases!inner(nome)
+        `)
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const mapped = (data || []).map(rp => ({
+        ...rp,
+        supplier_name: rp.suppliers?.name || '—',
+        base_name: rp.bases?.nome || '—',
+      }));
+      dispatch({ type: 'SET_RECURRING_PAYMENTS', payload: mapped });
+      dispatch({ type: 'SET_RECURRING_ERROR', payload: null });
+    } catch (err) {
+      console.error('Erro ao carregar pagamentos recorrentes:', err);
+      dispatch({ type: 'SET_RECURRING_ERROR', payload: err.message });
+    } finally {
+      dispatch({ type: 'SET_RECURRING_LOADING', payload: false });
+    }
   }
 
   // ── Escuta mudanças de sessão ─────────────────────────────────────────────
@@ -243,6 +309,43 @@ export function AppProvider({ children }) {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
+
+  // ── Carrega pagamentos recorrentes e fornecedores do Supabase ────────────────
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !sb) return;
+
+    async function fetchData() {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) {
+          dispatch({ type: 'SET_RECURRING_PAYMENTS', payload: [] });
+          dispatch({ type: 'SET_FORNECEDORES', payload: [] });
+          return;
+        }
+        
+        // Carrega fornecedores e pagamentos recorrentes
+        await loadSuppliers(user.id);
+        await loadRecurringPayments(user.id);
+      } catch (e) {
+        console.warn('Falha ao carregar dados:', e.message);
+      }
+    }
+
+    fetchData();
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        fetchData();
+      } else {
+        dispatch({ type: 'SET_RECURRING_PAYMENTS', payload: [] });
+        dispatch({ type: 'SET_FORNECEDORES', payload: [] });
+      }
+    });
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <AppContext.Provider value={{ state, dispatch, fetchBillAttachments, fetchLancamentoAttachments }}>
