@@ -80,7 +80,7 @@ function innerReducer(state, action) {
     case 'ADD_FORNECEDOR':
       return { ...state, fornecedores: [...state.fornecedores, action.payload] };
     case 'REMOVE_FORNECEDOR':
-      return { ...state, fornecedores: state.fornecedores.filter(n => n !== action.payload) };
+      return { ...state, fornecedores: state.fornecedores.filter(f => f.name !== action.payload) };
     case 'SET_FORNECEDORES':
       return { ...state, fornecedores: action.payload };
     case 'SET_SUPPLIER_LOADING':
@@ -196,7 +196,8 @@ export function AppProvider({ children }) {
       }
     });
 
-    loadForUser((sb.auth.getSession?.() as any)?.data?.session?.user?.id || null);
+    // FIX: removido "as any" (era TypeScript, inválido em .jsx)
+    loadForUser(sb.auth.getSession?.()?.data?.session?.user?.id || null);
 
     return () => subscription?.unsubscribe?.();
   }, []);
@@ -210,7 +211,8 @@ export function AppProvider({ children }) {
     };
 
     syncTimer.current = setInterval(doSync, 5000);
-    return () => clearInterval(syncTimer.current!);
+    // FIX: removido "!" (era TypeScript, inválido em .jsx)
+    return () => clearInterval(syncTimer.current);
   }, [state.loaded, state.lastLocalEdit, state.bills, state.lancamentos, state.tvoRegistros, state.bases, state.cats, state.catDespesas, state.gestores]);
 
   return (
